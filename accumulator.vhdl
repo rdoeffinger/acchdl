@@ -47,8 +47,6 @@ architecture behaviour of accumulator is
   signal allmask : flagtype;
   signal allvalue : flagtype;
   signal output : addblock;
-  signal carry : std_logic;
-  signal cycle : std_logic;
 begin
   process(read)
   begin
@@ -58,6 +56,7 @@ begin
       data <= (others => 'Z');
     end if;
   end process;
+
   process(clock,reset)
     variable outbuf : addblock;
     procedure get_accu(p : in position; v : out subblock) is
@@ -68,6 +67,7 @@ begin
         v := accu(p);
       end if;
     end get_accu;
+
     procedure set_accu(p : in position; v : in subblock) is
       variable replicate : subblock := (others => v(0));
     begin
@@ -82,38 +82,24 @@ begin
 
     procedure fixcarry(sign : in std_logic; pos : in position) is
       variable carrytmp : subblock;
-      variable carrypos : std_logic_vector(BLOCKBITS-1 downto 0) := (others => '0');
+      variable carrypos : integer;
       variable i : integer;
-      variable enables : std_logic_vector(2**BLOCKBITS downto 0) := (others => '0');
-      variable unknowns : std_logic_vector(NUMBLOCKS downto 0);
-      constant signs : flagtype := (others => sign);
     begin
-      unknowns := not (allmask and (allvalue xor signs)) & "0";
-      enables(pos+2) := '1';
-      for i in 0 to BLOCKBITS-1 loop
-        enables(NUMBLOCKS downto 2**i) := enables(NUMBLOCKS downto 2**i) or (enables(NUMBLOCKS-2**i downto 0) and unknowns(NUMBLOCKS downto 2**i));
-        unknowns(NUMBLOCKS downto 2**i) := unknowns(NUMBLOCKS downto 2**i) and unknowns(NUMBLOCKS-2**i downto 0);
-      end loop;
       for i in 1 to NUMBLOCKS - 1 loop
-        if enables(i) = '1' and allmask(i) = '1' and allvalue(i) /= sign then
-          enables(i+1) := '1';
+        next when i < pos + 2;
+        if allmask(i) = '0' or allvalue(i) = sign then
+          carrypos := i;
+          exit;
         end if;
+        allvalue(i) <= sign;
       end loop;
-      allvalue <= allvalue xor enables(NUMBLOCKS-1 downto 0);
-      for i in 0 to BLOCKBITS-1 loop
-        enables(NUMBLOCKS-2**i downto 0) := enables(NUMBLOCKS-2**i downto 0) or enables(NUMBLOCKS downto 2**i);
-      end loop;
-      for i in BLOCKBITS-1 downto 0 loop
-        carrypos(i) := '1';
-        carrypos(i) := enables(to_integer(unsigned(carrypos)));
-      end loop;
-      get_accu(to_integer(unsigned(carrypos)), carrytmp);
+      get_accu(carrypos, carrytmp);
       if sign = '0' then
         carrytmp := std_logic_vector(unsigned(carrytmp) + 1);
       else
         carrytmp := std_logic_vector(unsigned(carrytmp) - 1);
       end if;
-      set_accu(to_integer(unsigned(carrypos)), carrytmp);
+      set_accu(carrypos, carrytmp);
     end fixcarry;
 
     procedure add(sign : in std_logic; pos : in position; d : in addblock) is
@@ -127,34 +113,25 @@ begin
       result := std_logic_vector(unsigned(d) + unsigned(curval));
       set_accu(pos, result(BLOCKSIZE-1 downto 0));
       set_accu(pos+1, result(2*BLOCKSIZE-1 downto BLOCKSIZE));
-      carry <= result(data'length);
+      if result(data'length) = '1' then
+        fixcarry('0', pos);
+      end if;
     end add;
   begin
     if reset = '1' then
       accu <= (others => (others => '0'));
       allmask <= (others => '1');
       allvalue <= (others => '0');
-      carry <= '0';
-      cycle <= '0';
     elsif clock'event and clock = '1' then
-      if cycle = '0' then
-        carry <= '0';
-        cycle <= '1';
-        case op is
-          when op_add =>
-            add('0', pos, data);
-          when op_output =>
-            get_accu(pos, outbuf(BLOCKSIZE-1 downto 0));
-            get_accu(pos+1, outbuf(2*BLOCKSIZE-1 downto BLOCKSIZE));
-            output <= outbuf;
-          when op_nop => null;
-        end case;
-      else
-        cycle <= '0';
-        if carry = '1' then
-          fixcarry('0', pos);
-        end if;
-      end if;
+      case op is
+        when op_add =>
+          add('0', pos, data);
+        when op_output =>
+          get_accu(pos, outbuf(BLOCKSIZE-1 downto 0));
+          get_accu(pos+1, outbuf(2*BLOCKSIZE-1 downto BLOCKSIZE));
+          output <= outbuf;
+        when op_nop => null;
+      end case;
     end if;
   end process;
 end behaviour;
