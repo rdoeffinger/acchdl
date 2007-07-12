@@ -4,7 +4,8 @@ use ieee.numeric_std.all;
 
 package accumulator_types is
   constant BLOCKSIZE : integer := 32;
-  constant NUMBLOCKS : integer := 66;
+  constant BLOCKBITS : integer := 5;
+  constant NUMBLOCKS : integer := 20;
   subtype addblock is std_logic_vector(2*BLOCKSIZE-1 downto 0);
   subtype subblock is std_logic_vector(BLOCKSIZE-1 downto 0);
   type accutype is array (NUMBLOCKS-1 downto 0) of subblock;
@@ -81,66 +82,31 @@ begin
 
     procedure fixcarry(sign : in std_logic; pos : in position) is
       variable carrytmp : subblock;
-      variable carrypos : std_logic_vector(6 downto 0);
+      variable carrypos : std_logic_vector(BLOCKBITS-1 downto 0) := (others => '0');
       variable i : integer;
-      variable enables : std_logic_vector(NUMBLOCKS downto 0) := (others => '0');
+      variable enables : std_logic_vector(2**BLOCKBITS downto 0) := (others => '0');
       variable unknowns : std_logic_vector(NUMBLOCKS downto 0);
       constant signs : flagtype := (others => sign);
     begin
---      unknowns := not (allmask and (allvalue xor signs)) & "0";
+      unknowns := not (allmask and (allvalue xor signs)) & "0";
       enables(pos+2) := '1';
---      unknowns(NUMBLOCKS downto 1) := unknowns(NUMBLOCKS downto 1) and unknowns(NUMBLOCKS-1 downto 0);
---      enables(NUMBLOCKS downto 1) := enables(NUMBLOCKS downto 1) or (enables(NUMBLOCKS-1 downto 0) and unknowns(NUMBLOCKS downto 1));
---      unknowns(NUMBLOCKS downto 2) := unknowns(NUMBLOCKS downto 2) and unknowns(NUMBLOCKS-2 downto 0);
---      enables(NUMBLOCKS downto 2) := enables(NUMBLOCKS downto 2) or (enables(NUMBLOCKS-2 downto 0) and unknowns(NUMBLOCKS downto 2));
---      unknowns(NUMBLOCKS downto 4) := unknowns(NUMBLOCKS downto 4) and unknowns(NUMBLOCKS-4 downto 0);
---      enables(NUMBLOCKS downto 4) := enables(NUMBLOCKS downto 4) or (enables(NUMBLOCKS-4 downto 0) and unknowns(NUMBLOCKS downto 4));
---      unknowns(NUMBLOCKS downto 8) := unknowns(NUMBLOCKS downto 8) and unknowns(NUMBLOCKS-8 downto 0);
---      enables(NUMBLOCKS downto 8) := enables(NUMBLOCKS downto 8) or (enables(NUMBLOCKS-8 downto 0) and unknowns(NUMBLOCKS downto 8));
---      unknowns(NUMBLOCKS downto 16) := unknowns(NUMBLOCKS downto 16) and unknowns(NUMBLOCKS-16 downto 0);
---      enables(NUMBLOCKS downto 16) := enables(NUMBLOCKS downto 16) or (enables(NUMBLOCKS-16 downto 0) and unknowns(NUMBLOCKS downto 16));
---      unknowns(NUMBLOCKS downto 32) := unknowns(NUMBLOCKS downto 32) and unknowns(NUMBLOCKS-32 downto 0);
---      enables(NUMBLOCKS downto 32) := enables(NUMBLOCKS downto 32) or (enables(NUMBLOCKS-32 downto 0) and unknowns(NUMBLOCKS downto 32));
---      unknowns(NUMBLOCKS downto 64) := unknowns(NUMBLOCKS downto 64) and unknowns(NUMBLOCKS-64 downto 0);
---      enables(NUMBLOCKS downto 64) := enables(NUMBLOCKS downto 64) or (enables(NUMBLOCKS-64 downto 0) and unknowns(NUMBLOCKS downto 64));
+      for i in 0 to BLOCKBITS-1 loop
+        enables(NUMBLOCKS downto 2**i) := enables(NUMBLOCKS downto 2**i) or (enables(NUMBLOCKS-2**i downto 0) and unknowns(NUMBLOCKS downto 2**i));
+        unknowns(NUMBLOCKS downto 2**i) := unknowns(NUMBLOCKS downto 2**i) and unknowns(NUMBLOCKS-2**i downto 0);
+      end loop;
       for i in 1 to NUMBLOCKS - 1 loop
         if enables(i) = '1' and allmask(i) = '1' and allvalue(i) /= sign then
           enables(i+1) := '1';
         end if;
       end loop;
       allvalue <= allvalue xor enables(NUMBLOCKS-1 downto 0);
-      if unsigned(enables(NUMBLOCKS downto 64)) /= 0 then
-        enables(NUMBLOCKS downto NUMBLOCKS - 64) := (others => '0');
-        enables(NUMBLOCKS-64 downto 0) := enables(NUMBLOCKS downto 64);
-        carrypos(6) := '1';
-      end if;
-      -- enables(NUMBLOCKS downto max(NUMBLOCKS-63, 64)) = 0
-      if unsigned(enables(63 downto 32)) /= 0 then
-        enables(31 downto 0) := enables(63 downto 32);
-        carrypos(5) := '1';
-      end if;
-      -- enables(NUMBLOCKS downto max(NUMBLOCKS-31, 32)) = 0
-      if unsigned(enables(31 downto 16)) /= 0 then
-        enables(15 downto 0) := enables(31 downto 16);
-        carrypos(4) := '1';
-      end if;
-      -- enables(NUMBLOCKS downto max(NUMBLOCKS-47, 16)) = 0
-      if unsigned(enables(15 downto 8)) /= 0 then
-        enables(7 downto 0) := enables(15 downto 8);
-        carrypos(3) := '1';
-      end if;
-      -- enables(NUMBLOCKS downto max(NUMBLOCKS-56, 8)) = 0
-      if unsigned(enables(7 downto 4)) /= 0 then
-        enables(3 downto 0) := enables(7 downto 4);
-        carrypos(2) := '1';
-      end if;
-      -- enables(NUMBLOCKS downto max(NUMBLOCKS-60, 4)) = 0
-      if unsigned(enables(3 downto 2)) /= 0 then
-        enables(1 downto 0) := enables(3 downto 2);
-        carrypos(1) := '1';
-      end if;
-      carrypos(0) := enables(1);
-      carrypos := enables(6 downto 0);
+      for i in 0 to BLOCKBITS-1 loop
+        enables(NUMBLOCKS-2**i downto 0) := enables(NUMBLOCKS-2**i downto 0) or enables(NUMBLOCKS downto 2**i);
+      end loop;
+      for i in BLOCKBITS-1 downto 0 loop
+        carrypos(i) := '1';
+        carrypos(i) := enables(to_integer(unsigned(carrypos)));
+      end loop;
       get_accu(to_integer(unsigned(carrypos)), carrytmp);
       if sign = '0' then
         carrytmp := std_logic_vector(unsigned(carrytmp) + 1);
