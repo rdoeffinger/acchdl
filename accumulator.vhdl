@@ -95,7 +95,7 @@ begin
       end if;
     end fixcarry;
 
-    procedure add(sign : in std_logic; v : inout addblock) is
+    procedure add(sign : in std_logic; v : inout addblock; carry : out std_logic) is
       variable result : std_logic_vector(2*BLOCKSIZE downto 0);
       variable i : integer;
     begin
@@ -131,7 +131,7 @@ begin
       if cycle = '1' then
         case sig_op is
           when op_add =>
-            add(sig_sign, curval);
+            add(sig_sign, curval, carry);
             findcarry(sig_sign, sig_pos, addpos);
             if carry = '0' then
               allvalue <= allvalue;
