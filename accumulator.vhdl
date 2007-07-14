@@ -72,7 +72,7 @@ begin
     variable curval : addblock;
     variable curval0 : subblock;
     variable curval1 : subblock;
-	 variable addpos : natural;
+    variable addpos : natural;
 
     procedure findcarry(sign : in std_logic; carrypos : inout natural) is
       variable i : natural;
