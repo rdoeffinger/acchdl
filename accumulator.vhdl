@@ -156,11 +156,15 @@ begin
       end if;
       if curval0 = allone or curval0 = allzero then
         allmask(2*addpos0) <= '1';
+      else
+        allmask(2*addpos0) <= '0';
       end if;
       allvalue(2*addpos0) <= curval0(0);
       accu0(addpos0) <= curval0;
       if curval1 = allone or curval1 = allzero then
         allmask(2*addpos1+1) <= '1';
+      else
+        allmask(2*addpos1+1) <= '0';
       end if;
       allvalue(2*addpos1+1) <= curval1(0);
       accu1(addpos1) <= curval1;
