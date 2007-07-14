@@ -12,11 +12,13 @@ architecture behaviour of test_accumulator is
   signal acc_value : addblock := (others => 'Z');
   signal acc_pos : position := 0;
   signal acc_read : std_logic := '0';
+  signal acc_sign : std_logic := '0';
 begin
   acc : accumulator port map (
     reset => acc_reset,
     clock => acc_clock,
     read => acc_read,
+    sign => acc_sign,
     data => acc_value,
     pos => acc_pos,
     op => acc_op
@@ -25,6 +27,10 @@ begin
     procedure exec(op : in operation) is
     begin
       acc_op <= op;
+      wait for 100 ns;
+      acc_clock <= '1';
+      wait for 100 ns;
+      acc_clock <= '0';
       wait for 100 ns;
       acc_clock <= '1';
       wait for 100 ns;
@@ -38,7 +44,9 @@ begin
     acc_reset <= '0';
     acc_pos   <= 5;
     acc_value <= (others => '1');
+    acc_sign <= '1';
     exec(op_add);
+    acc_sign <= '0';
     exec(op_add);
     exec(op_add);
     exec(op_add);
