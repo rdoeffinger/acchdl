@@ -61,14 +61,7 @@ architecture behaviour of accumulator is
   signal addpos1 : natural;
   signal swap : boolean;
 begin
-  process(read)
-  begin
-    if read = '1' then
-      data <= output;
-    else
-      data <= (others => 'Z');
-    end if;
-  end process;
+  data <= output when read = '1' else (others => 'Z');
 
   process(clock,reset)
     variable outbuf : addblock;
