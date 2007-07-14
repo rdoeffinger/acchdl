@@ -17,6 +17,7 @@ package accumulator_types is
       reset : in std_logic;
       clock : in std_logic;
       read : in std_logic;
+      sign : in std_logic;
       data : inout addblock;
       pos : in position;
       op : in operation
@@ -36,6 +37,7 @@ entity accumulator is
     reset : in std_logic;
     clock : in std_logic;
     read : in std_logic;
+    sign : in std_logic;
     data : inout addblock;
     pos : in position;
     op : in operation
@@ -52,8 +54,9 @@ architecture behaviour of accumulator is
   signal input : addblock;
   signal output : addblock;
   signal sig_op : operation;
+  signal sig_pos : position;
+  signal sig_sign : std_logic;
   signal cycle : std_logic;
-  signal carry : std_logic;
   signal addpos0 : natural;
   signal addpos1 : natural;
   signal swap : boolean;
@@ -73,10 +76,12 @@ begin
     variable curval0 : subblock;
     variable curval1 : subblock;
     variable addpos : natural;
+    variable carry : std_logic;
 
-    procedure findcarry(sign : in std_logic; carrypos : inout natural) is
+    procedure findcarry(sign : in std_logic; pos : in position;
+                        carrypos : out natural) is
       variable i : natural;
-      variable start : natural := carrypos + 2;
+      variable start : natural := pos + 2;
     begin
       for i in 1 to NUMBLOCKS - 1 loop
         next when i < start;
@@ -103,19 +108,16 @@ begin
     begin
       result := std_logic_vector(unsigned(sign&input) + unsigned(v));
       v := result(input'length-1 downto 0);
-      carry <= result(input'length);
+      carry := result(input'length);
     end add;
   begin
     if reset = '1' then
       allmask <= (others => '1');
       allvalue <= (others => '0');
-      carry <= '0';
+      carry := '0';
       cycle <= '0';
     elsif clock'event and clock = '1' then
--- copy inputs for use in next cycle
       addpos := pos;
-      sig_op <= op;
-      input <= data;
 -- start load
       if allmask(2*addpos0) = '1' then
         curval0 := (others => allvalue(2*addpos0));
@@ -136,15 +138,26 @@ begin
       if cycle = '1' then
         case sig_op is
           when op_add =>
-            add('0', curval);
-            findcarry('0', addpos);
+            add(sig_sign, curval);
+            findcarry(sig_sign, sig_pos, addpos);
+            if carry = '0' then
+              allvalue <= allvalue;
+            end if;
           when op_output =>
             output <= curval;
           when op_nop => null;
         end case;
-      elsif carry = '1' then
-        fixcarry('0');
-        carry <= '0';
+      else
+-- copy inputs for use in next cycles
+        sig_pos <= addpos;
+        sig_op <= op;
+        sig_sign <= sign;
+        input <= data;
+
+        if carry = '1' then
+          fixcarry(sig_sign);
+          carry := '0';
+        end if;
       end if;
  -- start store
       if swap then
