@@ -61,10 +61,6 @@ architecture behaviour of accumulator is
   signal cycle : std_logic;
   signal addpos0 : natural;
   signal addpos1 : natural;
-  signal curmask0 : std_logic;
-  signal curmask1 : std_logic;
-  signal curmaskval0 : std_logic;
-  signal curmaskval1 : std_logic;
   signal swap : boolean;
 begin
   data <= output when read = '1' else (others => 'Z');
@@ -76,6 +72,12 @@ begin
     variable curval1 : subblock;
     variable addpos : natural;
     variable carry : std_logic;
+    variable next_addpos0 : natural;
+    variable next_addpos1 : natural;
+    variable curmask0 : std_logic;
+    variable curmask1 : std_logic;
+    variable curmaskval0 : std_logic;
+    variable curmaskval1 : std_logic;
 
     procedure findcarry(sign : in std_logic; pos : in position;
                         carrypos : out natural) is
@@ -167,27 +169,37 @@ begin
         curval1 := curval(2*BLOCKSIZE-1 downto BLOCKSIZE);
       end if;
       if curval0 = allone or curval0 = allzero then
-        allmask(2*addpos0) <= '1';
+        curmask0 := '1';
       else
-        allmask(2*addpos0) <= '0';
+        curmask0 := '0';
       end if;
-      allvalue(2*addpos0) <= curval0(0);
-      accu0(addpos0) <= curval0;
+      curmaskval0 := curval0(0);
       if curval1 = allone or curval1 = allzero then
-        allmask(2*addpos1+1) <= '1';
+        curmask1 := '1';
       else
-        allmask(2*addpos1+1) <= '0';
+        curmask1 := '0';
       end if;
-      allvalue(2*addpos1+1) <= curval1(0);
+      curmaskval1 := curval0(0);
+      allmask(2*addpos0) <= curmask0;
+      allvalue(2*addpos0) <= curmaskval0;
+      accu0(addpos0) <= curval0;
+      allmask(2*addpos1 + 1) <= curmask1;
+      allvalue(2*addpos1 + 1) <= curmaskval1;
       accu1(addpos1) <= curval1;
 -- end store
-      curmask0 <= allmask(addpos);
-      curmask1 <= allmask(addpos + 1);
-      curmaskval0 <= allvalue(addpos);
-      curmaskval1 <= allvalue(addpos + 1);
+      next_addpos0 := (addpos + 1) / 2;
+      next_addpos1 := addpos / 2;
+      if (next_addpos0 /= addpos0) then
+        curmask0 := allmask(2*addpos0);
+        curmaskval0 := allvalue(2*addpos0);
+      end if;
+      if (next_addpos1 /= addpos1) then
+        curmask1 := allmask(2*addpos1 + 1);
+        curmaskval1 := allvalue(2*addpos1 + 1);
+      end if;
 -- calculate addresses for next read
-      addpos0 <= (addpos + 1) / 2;
-      addpos1 <= addpos / 2;
+      addpos0 <= next_addpos0;
+      addpos1 <= next_addpos1;
       swap <= addpos mod 2 = 1;
 
       cycle <= not cycle;
