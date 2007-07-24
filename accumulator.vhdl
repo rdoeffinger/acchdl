@@ -6,6 +6,8 @@ package accumulator_types is
   constant BLOCKSIZE : integer := 32;
   constant BLOCKBITS : integer := 5;
   constant NUMBLOCKS : integer := 20;
+--  constant BLOCKBITS : integer := 7;
+--  constant NUMBLOCKS : integer := 68;
   subtype addblock is std_logic_vector(2*BLOCKSIZE-1 downto 0);
   subtype subblock is std_logic_vector(BLOCKSIZE-1 downto 0);
   type accutype is array (NUMBLOCKS/2-1 downto 0) of subblock;
@@ -59,6 +61,10 @@ architecture behaviour of accumulator is
   signal cycle : std_logic;
   signal addpos0 : natural;
   signal addpos1 : natural;
+  signal curmask0 : std_logic;
+  signal curmask1 : std_logic;
+  signal curmaskval0 : std_logic;
+  signal curmaskval1 : std_logic;
   signal swap : boolean;
 begin
   data <= output when read = '1' else (others => 'Z');
@@ -112,13 +118,13 @@ begin
     elsif clock'event and clock = '1' then
       addpos := pos;
 -- start load
-      if allmask(2*addpos0) = '1' then
-        curval0 := (others => allvalue(2*addpos0));
+      if curmask0 = '1' then
+        curval0 := (others => curmaskval0);
       else
         curval0 := accu0(addpos0);
       end if;
-      if allmask(2*addpos1+1) = '1' then
-        curval1 := (others => allvalue(2*addpos1+1));
+      if curmask1 = '1' then
+        curval1 := (others => curmaskval1);
       else
         curval1 := accu1(addpos1);
       end if;
@@ -175,6 +181,10 @@ begin
       allvalue(2*addpos1+1) <= curval1(0);
       accu1(addpos1) <= curval1;
 -- end store
+      curmask0 <= allmask(addpos);
+      curmask1 <= allmask(addpos + 1);
+      curmaskval0 <= allvalue(addpos);
+      curmaskval1 <= allvalue(addpos + 1);
 -- calculate addresses for next read
       addpos0 <= (addpos + 1) / 2;
       addpos1 <= addpos / 2;
