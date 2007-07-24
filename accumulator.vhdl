@@ -59,8 +59,8 @@ architecture behaviour of accumulator is
   signal sig_pos : position;
   signal sig_sign : std_logic;
   signal cycle : std_logic;
-  signal addpos0 : natural;
-  signal addpos1 : natural;
+  signal addpos0 : natural range 0 to NUMBLOCKS/2-1;
+  signal addpos1 : natural range 0 to NUMBLOCKS/2-1;
   signal swap : boolean;
 begin
   data <= output when read = '1' else (others => 'Z');
