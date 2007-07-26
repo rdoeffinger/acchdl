@@ -190,12 +190,12 @@ begin
       next_addpos0 := (addpos + 1) / 2;
       next_addpos1 := addpos / 2;
       if (next_addpos0 /= addpos0) then
-        curmask0 := allmask(2*addpos0);
-        curmaskval0 := allvalue(2*addpos0);
+        curmask0 := allmask(2*next_addpos0);
+        curmaskval0 := allvalue(2*next_addpos0);
       end if;
       if (next_addpos1 /= addpos1) then
-        curmask1 := allmask(2*addpos1 + 1);
-        curmaskval1 := allvalue(2*addpos1 + 1);
+        curmask1 := allmask(2*next_addpos1 + 1);
+        curmaskval1 := allvalue(2*next_addpos1 + 1);
       end if;
 -- calculate addresses for next read
       addpos0 <= next_addpos0;
