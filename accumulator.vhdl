@@ -68,6 +68,7 @@ begin
   process(clock,reset)
     variable outbuf : addblock;
     variable curval : addblock;
+    variable replicate : subblock;
     variable curval0 : subblock;
     variable curval1 : subblock;
     variable addpos : natural;
@@ -168,18 +169,20 @@ begin
         curval0 := curval(BLOCKSIZE-1 downto 0);
         curval1 := curval(2*BLOCKSIZE-1 downto BLOCKSIZE);
       end if;
-      if curval0 = allone or curval0 = allzero then
+      curmaskval0 := curval0(0);
+      replicate := (others => curmaskval0);
+      if curval0 = replicate then
         curmask0 := '1';
       else
         curmask0 := '0';
       end if;
-      curmaskval0 := curval0(0);
-      if curval1 = allone or curval1 = allzero then
+      curmaskval1 := curval1(0);
+      replicate := (others => curmaskval1);
+      if curval1 = replicate then
         curmask1 := '1';
       else
         curmask1 := '0';
       end if;
-      curmaskval1 := curval1(0);
       allmask(2*addpos0) <= curmask0;
       allvalue(2*addpos0) <= curmaskval0;
       accu0(addpos0) <= curval0;
