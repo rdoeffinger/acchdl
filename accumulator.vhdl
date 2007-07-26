@@ -179,7 +179,7 @@ begin
       else
         curmask1 := '0';
       end if;
-      curmaskval1 := curval0(0);
+      curmaskval1 := curval1(0);
       allmask(2*addpos0) <= curmask0;
       allvalue(2*addpos0) <= curmaskval0;
       accu0(addpos0) <= curval0;
