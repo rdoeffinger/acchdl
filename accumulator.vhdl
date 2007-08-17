@@ -87,12 +87,12 @@ begin
       end loop;
     end;
 
-    procedure fixcarry(sign : in std_logic) is
+    procedure fixcarry(sign : in std_logic; v : inout subblock) is
     begin
       if sign = '0' then
-        curval := std_logic_vector(unsigned(curval) + 1);
+        v := std_logic_vector(unsigned(v) + 1);
       else
-        curval := std_logic_vector(unsigned(curval) - 1);
+        v := std_logic_vector(unsigned(v) - 1);
       end if;
     end fixcarry;
 
@@ -143,7 +143,7 @@ begin
           allvalue <= allvalue;
         end if;
       when st_fixcarry =>
-        fixcarry(sig_sign);
+        fixcarry(sig_sign, curval);
         state <= st_ready;
       when st_ready =>
 -- copy inputs for use in next cycles
