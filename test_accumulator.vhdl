@@ -6,6 +6,7 @@ entity test_accumulator is
 end test_accumulator;
 
 architecture behaviour of test_accumulator is
+  signal acc_ready : std_logic;
   signal acc_reset : std_logic;
   signal acc_clock : std_logic := '0';
   signal acc_op : operation;
@@ -48,6 +49,7 @@ constant RUNTIME : integer := 10;
 
 begin
   acc : accumulator port map (
+    ready => acc_ready,
     reset => acc_reset,
     clock => acc_clock,
     read => acc_read,
@@ -67,7 +69,9 @@ begin
       acc_pos <= poss(testcycle);
       acc_op <= ops(testcycle);
       acc_sign <= '0';
-      testcycle <= testcycle + 1;
+      if acc_ready = '1' then
+        testcycle <= testcycle + 1;
+      end if;
     end if;
   end process;
 

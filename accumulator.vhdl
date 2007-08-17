@@ -10,12 +10,13 @@ package accumulator_types is
 --  constant NUMBLOCKS : integer := 68;
   subtype addblock is std_logic_vector(2*BLOCKSIZE-1 downto 0);
   subtype subblock is std_logic_vector(BLOCKSIZE-1 downto 0);
-  type accutype is array (NUMBLOCKS/2-1 downto 0) of subblock;
+  type accutype is array (NUMBLOCKS-1 downto 0) of subblock;
   subtype flagtype is std_logic_vector(NUMBLOCKS-1 downto 0);
   subtype position is natural range 0 to NUMBLOCKS-2;
   type operation is (op_nop, op_add, op_output);
   component accumulator is
     port (
+      ready : out std_logic;
       reset : in std_logic;
       clock : in std_logic;
       read : in std_logic;
@@ -36,6 +37,7 @@ use std.textio.all;
 
 entity accumulator is
   port (
+    ready : out std_logic;
     reset : in std_logic;
     clock : in std_logic;
     read : in std_logic;
@@ -47,46 +49,36 @@ entity accumulator is
 end accumulator;
 
 architecture behaviour of accumulator is
+  type state_t is (st_ready, st_add1, st_add2, st_out1, st_out2, st_fixcarry);
+
   constant allone : subblock := (others => '1');
   constant allzero : subblock := (others => '0');
-  signal accu0 : accutype;
-  signal accu1 : accutype;
+  signal accu : accutype;
   signal allmask : flagtype;
   signal allvalue : flagtype;
   signal input : addblock;
   signal output : addblock;
-  signal sig_op : operation;
   signal sig_pos : position;
   signal sig_sign : std_logic;
-  signal cycle : std_logic;
-  signal addpos0 : natural range 0 to NUMBLOCKS/2-1;
-  signal addpos1 : natural range 0 to NUMBLOCKS/2-1;
-  signal swap : boolean;
+  signal addpos : natural range 0 to NUMBLOCKS-1;
+  signal state : state_t;
 begin
   data <= output when read = '1' else (others => 'Z');
+  ready <= '1' when state = st_ready else '0';
 
   process(clock,reset)
     variable outbuf : addblock;
-    variable curval : addblock;
     variable replicate : subblock;
-    variable curval0 : subblock;
-    variable curval1 : subblock;
-    variable addpos : natural;
+    variable curval : subblock;
     variable carry : std_logic;
-    variable next_addpos0 : natural;
-    variable next_addpos1 : natural;
-    variable curmask0 : std_logic;
-    variable curmask1 : std_logic;
-    variable curmaskval0 : std_logic;
-    variable curmaskval1 : std_logic;
+	 variable next_addpos : natural;
 
     procedure findcarry(sign : in std_logic; pos : in position;
                         carrypos : out natural) is
       variable i : natural;
-      variable start : natural := pos + 2;
     begin
       for i in 1 to NUMBLOCKS - 1 loop
-        next when i < start;
+        next when i < pos;
         if allmask(i) = '0' or allvalue(i) = sign then
           carrypos := i;
           exit;
@@ -98,114 +90,82 @@ begin
     procedure fixcarry(sign : in std_logic) is
     begin
       if sign = '0' then
-        curval(BLOCKSIZE-1 downto 0) := std_logic_vector(unsigned(curval(BLOCKSIZE-1 downto 0)) + 1);
+        curval := std_logic_vector(unsigned(curval) + 1);
       else
-        curval(BLOCKSIZE-1 downto 0) := std_logic_vector(unsigned(curval(BLOCKSIZE-1 downto 0)) - 1);
+        curval := std_logic_vector(unsigned(curval) - 1);
       end if;
     end fixcarry;
 
-    procedure add(sign : in std_logic; v : inout addblock; carry : out std_logic) is
-      variable result : std_logic_vector(2*BLOCKSIZE downto 0);
+    procedure add(inc : in subblock; v : inout subblock; carry : inout std_logic) is
+      variable result : std_logic_vector(BLOCKSIZE downto 0);
+		variable c : std_logic_vector(0 downto 0);
       variable i : integer;
     begin
-      result := std_logic_vector(unsigned(sign&input) + unsigned(v));
-      v := result(input'length-1 downto 0);
-      carry := result(input'length);
+	   c(0) := carry;
+      result := std_logic_vector("0"&unsigned(inc) + unsigned(v) + unsigned(c));
+      v := result(BLOCKSIZE-1 downto 0);
+      carry := result(BLOCKSIZE);
     end add;
   begin
     if reset = '1' then
       allmask <= (others => '1');
       allvalue <= (others => '0');
-      carry := '0';
-      cycle <= '0';
+      state <= st_ready;
     elsif clock'event and clock = '1' then
-      addpos := pos;
 -- start load
-      if curmask0 = '1' then
-        curval0 := (others => curmaskval0);
+      if allmask(addpos) = '1' then
+        curval := (others => allvalue(addpos));
       else
-        curval0 := accu0(addpos0);
-      end if;
-      if curmask1 = '1' then
-        curval1 := (others => curmaskval1);
-      else
-        curval1 := accu1(addpos1);
-      end if;
-      if swap then
-        curval := curval0 & curval1;
-      else
-        curval := curval1 & curval0;
+        curval := accu(addpos);
       end if;
 -- end load
-      if cycle = '1' then
-        case sig_op is
-          when op_add =>
-            add(sig_sign, curval, carry);
-            findcarry(sig_sign, sig_pos, addpos);
-            if carry = '0' then
-              allvalue <= allvalue;
-            end if;
-          when op_output =>
-            output <= curval;
-          when op_nop => null;
-        end case;
-      else
+      case state is
+      when st_out1 =>
+        output(BLOCKSIZE-1 downto 0) <= curval;
+        addpos <= addpos + 1;
+        state <= st_out2;
+      when st_out2 =>
+        output(2*BLOCKSIZE-1 downto BLOCKSIZE) <= curval;
+        state <= st_ready;
+      when st_add1 =>
+        carry := '0';
+        add(input(BLOCKSIZE-1 downto 0), curval, carry);
+        addpos <= addpos + 1;
+        state <= st_add2;
+      when st_add2 =>
+        add(input(2*BLOCKSIZE-1 downto BLOCKSIZE), curval, carry);
+        findcarry(sig_sign, addpos + 1, next_addpos);
+        if carry /= sig_sign then
+          state <= st_fixcarry;
+          addpos <= next_addpos;
+        else
+          state <= st_ready;
+          allvalue <= allvalue;
+        end if;
+      when st_fixcarry =>
+        fixcarry(sig_sign);
+        state <= st_ready;
+      when st_ready =>
 -- copy inputs for use in next cycles
-        sig_pos <= addpos;
-        sig_op <= op;
+        addpos <= pos;
         sig_sign <= sign;
         input <= data;
-
-        if carry = '1' then
-          fixcarry(sig_sign);
-          carry := '0';
-        end if;
-      end if;
+        case op is
+        when op_nop => null;
+        when op_add => state <= st_add1;
+        when op_output => state <= st_out1;
+        end case;
+      end case;
  -- start store
-      if swap then
-        curval1 := curval(BLOCKSIZE-1 downto 0);
-        curval0 := curval(2*BLOCKSIZE-1 downto BLOCKSIZE);
+      replicate := (others => curval(0));
+      if curval = replicate then
+        allmask(addpos) <= '1';
       else
-        curval0 := curval(BLOCKSIZE-1 downto 0);
-        curval1 := curval(2*BLOCKSIZE-1 downto BLOCKSIZE);
+        allmask(addpos) <= '0';
       end if;
-      curmaskval0 := curval0(0);
-      replicate := (others => curmaskval0);
-      if curval0 = replicate then
-        curmask0 := '1';
-      else
-        curmask0 := '0';
-      end if;
-      curmaskval1 := curval1(0);
-      replicate := (others => curmaskval1);
-      if curval1 = replicate then
-        curmask1 := '1';
-      else
-        curmask1 := '0';
-      end if;
-      allmask(2*addpos0) <= curmask0;
-      allvalue(2*addpos0) <= curmaskval0;
-      accu0(addpos0) <= curval0;
-      allmask(2*addpos1 + 1) <= curmask1;
-      allvalue(2*addpos1 + 1) <= curmaskval1;
-      accu1(addpos1) <= curval1;
+      allvalue(addpos) <= curval(0);
+      accu(addpos) <= curval;
 -- end store
-      next_addpos0 := (addpos + 1) / 2;
-      next_addpos1 := addpos / 2;
-      if (next_addpos0 /= addpos0) then
-        curmask0 := allmask(2*next_addpos0);
-        curmaskval0 := allvalue(2*next_addpos0);
-      end if;
-      if (next_addpos1 /= addpos1) then
-        curmask1 := allmask(2*next_addpos1 + 1);
-        curmaskval1 := allvalue(2*next_addpos1 + 1);
-      end if;
--- calculate addresses for next read
-      addpos0 <= next_addpos0;
-      addpos1 <= next_addpos1;
-      swap <= addpos mod 2 = 1;
-
-      cycle <= not cycle;
     end if;
   end process;
 end behaviour;
