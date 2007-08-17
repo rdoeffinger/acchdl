@@ -71,7 +71,7 @@ begin
     variable replicate : subblock;
     variable curval : subblock;
     variable carry : std_logic;
-	 variable next_addpos : natural;
+    variable next_addpos : natural;
 
     procedure findcarry(sign : in std_logic; pos : in position;
                         carrypos : out natural) is
@@ -98,10 +98,10 @@ begin
 
     procedure add(inc : in subblock; v : inout subblock; carry : inout std_logic) is
       variable result : std_logic_vector(BLOCKSIZE downto 0);
-		variable c : std_logic_vector(0 downto 0);
+      variable c : std_logic_vector(0 downto 0);
       variable i : integer;
     begin
-	   c(0) := carry;
+      c(0) := carry;
       result := std_logic_vector("0"&unsigned(inc) + unsigned(v) + unsigned(c));
       v := result(BLOCKSIZE-1 downto 0);
       carry := result(BLOCKSIZE);
