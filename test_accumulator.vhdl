@@ -69,7 +69,7 @@ begin
       acc_pos <= poss(testcycle);
       acc_op <= ops(testcycle);
       acc_sign <= '0';
-      if acc_ready = '1' then
+      if acc_ready = '1' or resets(testcycle) = '1' then
         testcycle <= testcycle + 1;
       end if;
     end if;

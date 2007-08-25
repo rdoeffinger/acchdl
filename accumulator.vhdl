@@ -64,7 +64,7 @@ architecture behaviour of accumulator is
   signal state : state_t;
 begin
   data <= output when read = '1' else (others => 'Z');
-  ready <= '1' when state = st_ready else '0';
+  ready <= '1' when state = st_ready and reset = '0' else '0';
 
   process(clock,reset)
     variable outbuf : addblock;
