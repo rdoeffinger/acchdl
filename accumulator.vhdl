@@ -19,9 +19,9 @@ package accumulator_types is
       ready : out std_logic;
       reset : in std_logic;
       clock : in std_logic;
-      read : in std_logic;
       sign : in std_logic;
-      data : inout addblock;
+      data_in : in addblock;
+      data_out : out addblock;
       pos : in position;
       op : in operation
     );
@@ -40,9 +40,9 @@ entity accumulator is
     ready : out std_logic;
     reset : in std_logic;
     clock : in std_logic;
-    read : in std_logic;
     sign : in std_logic;
-    data : inout addblock;
+    data_in : in addblock;
+    data_out : out addblock;
     pos : in position;
     op : in operation
   );
@@ -57,13 +57,11 @@ architecture behaviour of accumulator is
   signal allmask : flagtype;
   signal allvalue : flagtype;
   signal input : addblock;
-  signal output : addblock;
   signal sig_pos : position;
   signal sig_sign : std_logic;
   signal addpos : natural range 0 to NUMBLOCKS-1;
   signal state : state_t;
 begin
-  data <= output when read = '1' else (others => 'Z');
   ready <= '1' when state = st_ready and reset = '0' else '0';
 
   process(clock,reset)
@@ -121,11 +119,11 @@ begin
 -- end load
       case state is
       when st_out1 =>
-        output(BLOCKSIZE-1 downto 0) <= curval;
+        data_out(BLOCKSIZE-1 downto 0) <= X"01234567";--curval;
         addpos <= addpos + 1;
         state <= st_out2;
       when st_out2 =>
-        output(2*BLOCKSIZE-1 downto BLOCKSIZE) <= curval;
+        data_out(2*BLOCKSIZE-1 downto BLOCKSIZE) <= X"89abcdef"; --curval;
         state <= st_ready;
       when st_add1 =>
         carry := '0';
@@ -149,7 +147,7 @@ begin
 -- copy inputs for use in next cycles
         addpos <= pos;
         sig_sign <= sign;
-        input <= data;
+        input <= data_in;
         case op is
         when op_nop => null;
         when op_add => state <= st_add1;
