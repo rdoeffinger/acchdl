@@ -61,8 +61,12 @@ architecture behaviour of accumulator is
   signal sig_sign : std_logic;
   signal addpos : natural range 0 to NUMBLOCKS-1;
   signal state : state_t;
+  signal out_buf : addblock;
+  attribute clock_signal : string;
+  attribute clock_signal of clock : signal is "yes";
 begin
   ready <= '1' when state = st_ready and reset = '0' else '0';
+  data_out <= out_buf;
 
   process(clock,reset)
     variable outbuf : addblock;
@@ -74,15 +78,48 @@ begin
     procedure findcarry(sign : in std_logic; pos : in position;
                         carrypos : out natural) is
       variable i : natural;
+      variable add : natural;
+      variable tmp : std_logic_vector(NUMBLOCKS - 1 downto 0);
+      variable tmp2 : std_logic_vector(NUMBLOCKS - 1 downto 0);
+      variable cptmp : unsigned(BLOCKBITS - 1 downto 0);
     begin
-      for i in 1 to NUMBLOCKS - 1 loop
-        next when i < pos;
-        if allmask(i) = '0' or allvalue(i) = sign then
-          carrypos := i;
-          exit;
-        end if;
-        allvalue(i) <= sign;
-      end loop;
+      add := 2**pos;
+      if sign = '1' then
+        tmp := allvalue or not allmask;
+        tmp2 := std_logic_vector(unsigned(tmp) - add);
+        tmp := tmp and not tmp2;
+      else
+        tmp := allvalue and allmask;
+        tmp2 := std_logic_vector(unsigned(tmp) + add);
+        tmp := tmp2 and not tmp;
+      end if;
+      if (tmp and X"aaaaa") /= X"00000" then
+        cptmp(0) := '1';
+      else
+        cptmp(0) := '0';
+      end if;
+      if (tmp and X"ccccc") /= X"00000" then
+        cptmp(1) := '1';
+      else
+        cptmp(1) := '0';
+      end if;
+      if (tmp and X"0f0f0") /= X"00000" then
+        cptmp(2) := '1';
+      else
+        cptmp(2) := '0';
+      end if;
+      if (tmp and X"0ff00") /= X"00000" then
+        cptmp(3) := '1';
+      else
+        cptmp(3) := '0';
+      end if;
+      if (tmp and X"f0000") /= X"00000" then
+        cptmp(4) := '1';
+      else
+        cptmp(4) := '0';
+      end if;
+      carrypos := to_integer(cptmp);
+      allvalue <= tmp2;
     end;
 
     procedure fixcarry(sign : in std_logic; v : inout subblock) is
@@ -119,11 +156,11 @@ begin
 -- end load
       case state is
       when st_out1 =>
-        data_out(BLOCKSIZE-1 downto 0) <= X"01234567";--curval;
+        out_buf(BLOCKSIZE-1 downto 0) <= X"01234567";--curval;
         addpos <= addpos + 1;
         state <= st_out2;
       when st_out2 =>
-        data_out(2*BLOCKSIZE-1 downto BLOCKSIZE) <= X"89abcdef"; --curval;
+        out_buf(2*BLOCKSIZE-1 downto BLOCKSIZE) <= X"89abcdef"; --curval;
         state <= st_ready;
       when st_add1 =>
         carry := '0';
