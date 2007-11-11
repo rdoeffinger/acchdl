@@ -155,11 +155,11 @@ begin
 -- end load
       case state is
       when st_out1 =>
-        out_buf(BLOCKSIZE-1 downto 0) <= X"01234567";--curval;
+        out_buf(BLOCKSIZE-1 downto 0) <= curval;
         addpos <= addpos + 1;
         state <= st_out2;
       when st_out2 =>
-        out_buf(2*BLOCKSIZE-1 downto BLOCKSIZE) <= X"89abcdef"; --curval;
+        out_buf(2*BLOCKSIZE-1 downto BLOCKSIZE) <= curval;
         state <= st_ready;
       when st_add1 =>
         carry := '0';
