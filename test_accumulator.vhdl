@@ -10,10 +10,11 @@ architecture behaviour of test_accumulator is
   signal acc_reset : std_logic;
   signal acc_clock : std_logic := '0';
   signal acc_op : operation;
-  signal acc_value : addblock := (others => 'Z');
+  signal acc_value : addblock;
   signal acc_pos : position;
   signal acc_read : std_logic;
   signal acc_sign : std_logic;
+  signal acc_res : addblock;
   signal testcycle : integer := 0;
 
   constant NUMTESTS : integer := 5;
@@ -33,11 +34,6 @@ architecture behaviour of test_accumulator is
     0, 5, 5, 5, 7
   );
 
-  type reads_t is array (0 to NUMTESTS - 1) of std_logic;
-  constant reads : reads_t := (
-    '0', '0', '0', '0', '1'
-  );
-
   type resets_t is array (0 to NUMTESTS - 1) of std_logic;
   constant resets : resets_t := (
     '1', '0', '0', '0', '0'
@@ -52,9 +48,9 @@ begin
     ready => acc_ready,
     reset => acc_reset,
     clock => acc_clock,
-    read => acc_read,
     sign => acc_sign,
-    data => acc_value,
+    data_in => acc_value,
+    data_out => acc_res,
     pos => acc_pos,
     op => acc_op
   );
@@ -63,7 +59,6 @@ begin
   begin
     assert testcycle < RUNTIME report "Test Done";
     if (rising_edge(acc_clock) and testcycle < NUMTESTS) then
-      acc_read  <= reads(testcycle);
       acc_reset <= resets(testcycle);
       acc_value <= datas(testcycle);
       acc_pos <= poss(testcycle);
