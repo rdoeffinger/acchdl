@@ -57,7 +57,6 @@ architecture behaviour of accumulator is
   signal allmask : flagtype;
   signal allvalue : flagtype;
   signal input : addblock;
-  signal sig_pos : position;
   signal sig_sign : std_logic;
   signal addpos : natural range 0 to NUMBLOCKS-1;
   signal state : state_t;
