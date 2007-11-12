@@ -12,7 +12,6 @@ architecture behaviour of test_accumulator is
   signal acc_op : operation;
   signal acc_value : addblock;
   signal acc_pos : position;
-  signal acc_read : std_logic;
   signal acc_sign : std_logic;
   signal acc_res : addblock;
   signal testcycle : integer := 0;
