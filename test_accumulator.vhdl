@@ -38,7 +38,7 @@ architecture behaviour of test_accumulator is
     '1', '0', '0', '0', '0'
   );
 
-constant ACC_CLOCK_PERIOD : time := 100ns;
+constant ACC_CLOCK_PERIOD : time := 10ns;
 
 constant RUNTIME : integer := 10;
 
