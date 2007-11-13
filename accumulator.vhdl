@@ -5,13 +5,13 @@ use ieee.numeric_std.all;
 package accumulator_types is
   constant BLOCKSIZE : integer := 32;
   constant BLOCKBITS : integer := 5;
-  constant NUMBLOCKS : integer := 20;
+  constant NUMBLOCKS : integer := 19;
 --  constant BLOCKBITS : integer := 7;
 --  constant NUMBLOCKS : integer := 68;
   subtype addblock is std_logic_vector(2*BLOCKSIZE-1 downto 0);
   subtype subblock is std_logic_vector(BLOCKSIZE-1 downto 0);
   type accutype is array (NUMBLOCKS-1 downto 0) of subblock;
-  subtype flagtype is std_logic_vector(NUMBLOCKS-1 downto 0);
+  subtype flagtype is std_logic_vector(NUMBLOCKS downto 0);
   subtype position is natural range 0 to NUMBLOCKS-2;
   type operation is (op_nop, op_add, op_output);
   component accumulator is
