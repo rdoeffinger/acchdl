@@ -49,7 +49,7 @@ entity accumulator is
 end accumulator;
 
 architecture behaviour of accumulator is
-  type state_t is (st_ready, st_add1, st_add2, st_out1, st_out2, st_fixcarry);
+  type state_t is (st_ready, st_add1, st_add2, st_out, st_fixcarry);
 
   constant allone : subblock := (others => '1');
   constant allzero : subblock := (others => '0');
@@ -154,12 +154,9 @@ begin
       end if;
 -- end load
       case state is
-      when st_out1 =>
+      when st_out =>
         out_buf(BLOCKSIZE-1 downto 0) <= curval;
-        addpos <= addpos + 1;
-        state <= st_out2;
-      when st_out2 =>
-        out_buf(2*BLOCKSIZE-1 downto BLOCKSIZE) <= curval;
+        out_buf(2*BLOCKSIZE-1 downto BLOCKSIZE) <= (others => '0');
         state <= st_ready;
       when st_add1 =>
         carry := '0';
@@ -187,7 +184,7 @@ begin
         case op is
         when op_nop => null;
         when op_add => state <= st_add1;
-        when op_output => state <= st_out1;
+        when op_output => state <= st_out;
         end case;
       end case;
  -- start store
