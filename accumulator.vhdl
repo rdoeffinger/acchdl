@@ -78,8 +78,8 @@ begin
                         carrypos : out natural) is
       variable i : natural;
       variable add : natural;
-      variable tmp : std_logic_vector(NUMBLOCKS - 1 downto 0);
-      variable tmp2 : std_logic_vector(NUMBLOCKS - 1 downto 0);
+      variable tmp : flagtype;
+      variable tmp2 : flagtype;
       variable cptmp : unsigned(BLOCKBITS - 1 downto 0);
     begin
       add := 2**pos;
