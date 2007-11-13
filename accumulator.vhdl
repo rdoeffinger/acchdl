@@ -87,10 +87,12 @@ begin
         tmp := allvalue or not allmask;
         tmp2 := std_logic_vector(unsigned(tmp) - add);
         tmp := tmp and not tmp2;
+        tmp2 := tmp2 or tmp;
       else
         tmp := allvalue and allmask;
         tmp2 := std_logic_vector(unsigned(tmp) + add);
         tmp := tmp2 and not tmp;
+        tmp2 := tmp2 and not tmp;
       end if;
       if (tmp and X"aaaaa") /= X"00000" then
         cptmp(0) := '1';
