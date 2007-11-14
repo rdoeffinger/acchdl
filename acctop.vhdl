@@ -367,9 +367,9 @@ begin
              ready = '1' then
             buffered_posted_cmd_avail := '0';
             buffered_posted_data_avail := '0';
-            data_in <= buffered_posted_data;
-            sign <= '0';
-            pos <= to_integer(unsigned(buffered_posted_addr(5 downto 0)));
+            data_in <= std_logic_vector(unsigned(std_logic_vector'(X"0000000000"&"1"&buffered_posted_data(22 downto 0))) sll to_integer(unsigned(buffered_posted_data(27 downto 23))));
+            sign <= buffered_posted_data(31);
+            pos <= to_integer(unsigned(buffered_posted_data(30 downto 28)));
             op <= op_add;
           end if;
         else
