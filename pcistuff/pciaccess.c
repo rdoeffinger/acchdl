@@ -83,10 +83,20 @@ int find_device(off_t *map_base, size_t *map_size) {
   return found;
 }
 
+void *map_physical(off_t base, size_t size) {
+  void *mapped;
+  int memfd = open("/dev/mem", O_RDWR);
+  if (memfd == -1) {
+    printf("could not open '/dev/mem'\n");
+    return NULL;
+  }
+  mapped = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, memfd, base);
+  return mapped;
+}
+
 int main(int argc, char *argv[]) {
   size_t map_size = 0;
   off_t map_base = 0;
-  int memfd;
   volatile uint8_t *mapped;
   if (!find_device(&map_base, &map_size)) {
     printf("device not found!\n");
@@ -96,12 +106,11 @@ int main(int argc, char *argv[]) {
     printf("device invalid!\n");
     return 1;
   }
-  memfd = open("/dev/mem", O_RDWR);
-  if (memfd == -1) {
-    printf("could not open '/dev/mem'\n");
+  mapped = map_physical(map_base, map_size);
+  if (!mapped) {
+    printf("mmap of PCI device failed\n");
     return 1;
   }
-  mapped = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, memfd, map_base);
   while (1) {
     printf("\n>"); fflush(stdout);
     if (!process_command(mapped)) break;
