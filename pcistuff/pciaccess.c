@@ -15,19 +15,59 @@
 #define MAXLINE 48
 char buffer[MAXLINE];
 
+int process_command(uint8_t *mapped) {
+  volatile double *mapped_double = (double *)mapped;
+  volatile float *mapped_float = (float *)mapped;
+  volatile uint32_t *mapped_32 = (uint32_t *)mapped;
+  volatile uint64_t *mapped_64 = (uint64_t *)mapped;
+  uint64_t vali;
+  double valf;
+  int addr;
+  char *par1;
+  char *par2 = NULL;
+  char *eol;
+  fgets(buffer, sizeof(buffer), stdin);
+  eol = strchr(buffer, '\n');
+  if (eol) *eol = 0;
+  par1 = strchr(buffer, ' ');
+  if (par1) {
+    *par1++ = 0;
+    par2 = strchr(par1, ' ');
+    if (par2) {
+      *par2++ = 0;
+      vali = strtol(par2, NULL, 0);
+      valf = strtod(par2, NULL);
+    }
+    addr = strtol(par1, NULL, 0);
+  }
+  if (strcmp(buffer, "q") == 0) return 0;
+  if (par1 && strcmp(buffer, "r64") == 0) {
+    printf("%016"PRIx64"\n", mapped_64[addr]);
+  } else if (par1 && strcmp(buffer, "r32") == 0) {
+    printf("%08"PRIx32"\n", mapped_32[addr]);
+  } else if (par1 && strcmp(buffer, "rf") == 0) {
+    printf("%f\n", (double)mapped_float[addr]);
+  } else if (par1 && strcmp(buffer, "rd") == 0) {
+    printf("%f\n", mapped_double[addr]);
+  } else if (par1 && par2 && strcmp(buffer, "w64") == 0) {
+    mapped_64[addr] = vali;
+  } else if (par1 && par2 && strcmp(buffer, "w32") == 0) {
+    mapped_32[addr] = vali;
+  } else if (par1 && par2 && strcmp(buffer, "wf") == 0) {
+    mapped_float[addr] = valf;
+  } else if (par1 && par2 && strcmp(buffer, "wd") == 0) {
+    mapped_double[addr] = valf;
+  }
+  return 1;
+}
+
 int main(int argc, char *argv[]) {
   struct pci_access *pci_acc = pci_alloc();
   struct pci_dev *device;
   size_t map_size = 0;
   off_t map_base = 0;
-  uint64_t tmp;
   int memfd;
-  volatile double *mapped_double;
-  volatile float *mapped_float;
-  volatile uint64_t *mapped;
-  volatile uint32_t *mapped_dword;
-  volatile uint8_t *mapped_byte;
-  int i;
+  volatile uint8_t *mapped;
   pci_init(pci_acc);
   pci_scan_bus(pci_acc);
   device = pci_acc->devices;
@@ -52,78 +92,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   mapped = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, memfd, map_base);
-  mapped_double = (double *)mapped;
-  mapped_float = (float *)mapped;
-  mapped_dword = (uint32_t *)mapped;
-  mapped_byte = (uint8_t *)mapped;
   while (1) {
-    uint64_t vali;
-    double valf;
-    int addr;
-    char *par1;
-    char *par2 = NULL;
-    char *eol;
     printf("\n>"); fflush(stdout);
-    fgets(buffer, sizeof(buffer), stdin);
-    eol = strchr(buffer, '\n');
-    if (eol) *eol = 0;
-    par1 = strchr(buffer, ' ');
-    if (par1) {
-      *par1++ = 0;
-      par2 = strchr(par1, ' ');
-      if (par2) {
-        *par2++ = 0;
-        vali = strtol(par2, NULL, 0);
-        valf = strtod(par2, NULL);
-      }
-      addr = strtol(par1, NULL, 0);
-    }
-    if (strcmp(buffer, "q") == 0) break;
-    if (par1 && strcmp(buffer, "r64") == 0) {
-      printf("%016"PRIx64"\n", mapped[addr]);
-    } else if (par1 && strcmp(buffer, "r32") == 0) {
-      printf("%08"PRIx32"\n", mapped_dword[addr]);
-    } else if (par1 && strcmp(buffer, "rf") == 0) {
-      printf("%f\n", (double)mapped_float[addr]);
-    } else if (par1 && strcmp(buffer, "rd") == 0) {
-      printf("%f\n", mapped_double[addr]);
-    } else if (par1 && par2 && strcmp(buffer, "w64") == 0) {
-      mapped[addr] = vali;
-    } else if (par1 && par2 && strcmp(buffer, "w32") == 0) {
-      mapped_dword[addr] = vali;
-    } else if (par1 && par2 && strcmp(buffer, "wf") == 0) {
-      mapped_float[addr] = valf;
-    } else if (par1 && par2 && strcmp(buffer, "wd") == 0) {
-      mapped_double[addr] = valf;
-    }
+    if (!process_command(mapped)) break;
   }
-#if 0
-  printf("mapped\n"); fflush(stdout);
-  usleep(1000 * 1000);
-  printf("starting write\n"); fflush(stdout);
-  usleep(1000 * 1000);
-  mapped[1000] = 123;
-  printf("wrote\n"); fflush(stdout);
-  usleep(1000 * 1000);
-  printf("starting write2\n"); fflush(stdout);
-  usleep(1000 * 1000);
-  mapped[1000] = 456;
-  printf("wrote2\n"); fflush(stdout);
-  usleep(1000 * 1000);
-#if 1
-  printf("starting read\n"); fflush(stdout);
-  usleep(1000 * 1000);
-  printf("read %"PRIx64"\n", mapped[1000]); fflush(stdout);
-  usleep(1000 * 1000);
-  printf("read %"PRIx64"\n", mapped[0]); fflush(stdout);
-#endif
-  usleep(1000 * 1000);
-  for (i = 7; i < 16; i++) {
-    printf("%x ", mapped_byte[i]); fflush(stdout);
-  }
-  tmp = mapped[0];
-  mapped[0] = 128;
-#endif
-//  printf("%"PRIx64"\n", tmp);
   return 0;
 }
