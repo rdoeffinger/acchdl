@@ -305,7 +305,9 @@ begin
       clock2 <= '0';
       state <= START;
       buffered_posted_cmd_avail := '0';
+      buffered_posted_data_avail := '0';
       buffered_nonposted_cmd_avail := '0';
+      buffered_nonposted_data_avail := '0';
     elsif rising_edge(clock) then
       if posted_cmd_empty = '0' and
          buffered_posted_cmd_avail = '0' then
