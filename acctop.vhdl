@@ -186,7 +186,6 @@ signal sign : std_logic;
 signal pos : position;
 type state_t is (START, READ_WAIT, READ_WAIT2);
 signal state : state_t;
-signal read_tag : std_logic_vector(TAG_LEN - 1 downto 0);
 
 begin
   reg0 : accumulator port map (
