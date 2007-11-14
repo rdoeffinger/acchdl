@@ -15,6 +15,26 @@
 #define MAXLINE 48
 char buffer[MAXLINE];
 
+const char help_text[] =
+  "Commands:\n"
+  "  h\n"
+  "  help\n"
+  "    Print this help message\n"
+  "  q\n"
+  "  quit\n"
+  "    Quit program\n"
+  "  b\n"
+  "    Unfinished benchmark code\n"
+  "  r32 <addr>\n"
+  "  r64 <addr>\n"
+  "  rf <addr>\n"
+  "  rd <addr>\n"
+  "  w32 <addr> <int>\n"
+  "  w64 <addr> <int>\n"
+  "  wf <addr> <float>\n"
+  "  wd <addr> <float>\n"
+  "";
+
 int process_command(volatile uint8_t *mapped) {
   volatile double *mapped_double = (double *)mapped;
   volatile float *mapped_float = (float *)mapped;
@@ -31,16 +51,32 @@ int process_command(volatile uint8_t *mapped) {
   if (eol) *eol = 0;
   par1 = strchr(buffer, ' ');
   if (par1) {
+    char *end;
     *par1++ = 0;
     par2 = strchr(par1, ' ');
     if (par2) {
+      char *endf;
       *par2++ = 0;
-      vali = strtol(par2, NULL, 0);
-      valf = strtod(par2, NULL);
+      vali = strtol(par2, &end, 0);
+      valf = strtod(par2, &endf);
+      if (*end && *endf) {
+        printf("error parsing value\n");
+        return 1;
+      }
     }
-    addr = strtol(par1, NULL, 0);
+    addr = strtol(par1, &end, 0);
+    if (*end && end != par2) {
+      printf("error parsing address\n");
+      return 1;
+    }
   }
-  if (strcmp(buffer, "q") == 0) return 0;
+  if (strcmp(buffer, "h") == 0 || strcmp(buffer, "help") == 0) {
+    printf(help_text);
+    return 1;
+  }
+  if (strcmp(buffer, "q") == 0 || strcmp(buffer, "quit") == 0)
+    return 0;
+  return 1;
   if (strcmp(buffer, "b") == 0) {
     int i;
     for (i = 0; i < 2; i++)
@@ -63,7 +99,8 @@ int process_command(volatile uint8_t *mapped) {
     mapped_float[addr] = valf;
   } else if (par1 && par2 && strcmp(buffer, "wd") == 0) {
     mapped_double[addr] = valf;
-  }
+  } else
+    printf("Unknown or invalid command\n");
   return 1;
 }
 
