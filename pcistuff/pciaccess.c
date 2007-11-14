@@ -76,7 +76,6 @@ int process_command(volatile uint8_t *mapped) {
   }
   if (strcmp(buffer, "q") == 0 || strcmp(buffer, "quit") == 0)
     return 0;
-  return 1;
   if (strcmp(buffer, "b") == 0) {
     int i;
     for (i = 0; i < 2; i++)
