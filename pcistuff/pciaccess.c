@@ -15,7 +15,7 @@
 #define MAXLINE 48
 char buffer[MAXLINE];
 
-int process_command(uint8_t *mapped) {
+int process_command(volatile uint8_t *mapped) {
   volatile double *mapped_double = (double *)mapped;
   volatile float *mapped_float = (float *)mapped;
   volatile uint32_t *mapped_32 = (uint32_t *)mapped;
