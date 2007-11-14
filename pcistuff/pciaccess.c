@@ -61,13 +61,10 @@ int process_command(uint8_t *mapped) {
   return 1;
 }
 
-int main(int argc, char *argv[]) {
+int find_device(off_t *map_base, size_t *map_size) {
+  int found = 0;
   struct pci_access *pci_acc = pci_alloc();
   struct pci_dev *device;
-  size_t map_size = 0;
-  off_t map_base = 0;
-  int memfd;
-  volatile uint8_t *mapped;
   pci_init(pci_acc);
   pci_scan_bus(pci_acc);
   device = pci_acc->devices;
@@ -76,14 +73,27 @@ int main(int argc, char *argv[]) {
     printf("device: %x %x %lx %lx\n", device->vendor_id, device->device_id,
              device->base_addr[0], device->size[0]);
     if (device->vendor_id == VENDOR && device->device_id == DEVICE) {
-      map_base = device->base_addr[0];
-      map_size = device->size[0];
+      *map_base = device->base_addr[0];
+      *map_size = device->size[0];
+      found = 1;
     }
     device = device->next;
   }
   pci_cleanup(pci_acc);
+  return found;
+}
+
+int main(int argc, char *argv[]) {
+  size_t map_size = 0;
+  off_t map_base = 0;
+  int memfd;
+  volatile uint8_t *mapped;
+  if (!find_device(&map_base, &map_size)) {
+    printf("device not found!\n");
+    return 1;
+  }
   if (!map_base || !map_size) {
-    printf("device not found/invalid!\n");
+    printf("device invalid!\n");
     return 1;
   }
   memfd = open("/dev/mem", O_RDWR);
