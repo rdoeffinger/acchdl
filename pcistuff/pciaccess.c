@@ -91,6 +91,7 @@ void *map_physical(off_t base, size_t size) {
     return NULL;
   }
   mapped = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, memfd, base);
+  close(memfd);
   return mapped;
 }
 
