@@ -77,9 +77,17 @@ int process_command(volatile uint8_t *mapped) {
   if (strcmp(buffer, "q") == 0 || strcmp(buffer, "quit") == 0)
     return 0;
   if (strcmp(buffer, "b") == 0) {
-    int i;
-    for (i = 0; i < 100000000; i++)
-      mapped_float[0] = 1.0;
+    int i = 100000000;
+    do {
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+    } while (--i);
 //    printf("%016"PRIx64"\n", mapped_64[2]);
   } else if (par1 && strcmp(buffer, "r64") == 0) {
     printf("%016"PRIx64"\n", mapped_64[addr]);
