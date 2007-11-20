@@ -295,6 +295,7 @@ begin
 
   process (clock, reset_n)
   variable regnum : integer range 0 to NUMREGS-1;
+  variable block_response : std_logic;
   variable buffered_posted_cmd_avail : std_logic;
   variable buffered_posted_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
   variable buffered_posted_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
@@ -347,6 +348,7 @@ begin
       clock2 <= not clock2;
       response_cmd_put <= '0';
       response_data_put <= '0';
+      block_response := response_cmd_full;
 
       for regnum in 0 to NUMREGS-1 loop
       if clock2 = '1' and ready(regnum) = '1' then
@@ -357,8 +359,9 @@ begin
           state(regnum) <= READ_WAIT2;
         end if;
         if state(regnum) = READ_WAIT2 and
-           response_cmd_full = '0' and
+           block_response = '0' and
            response_data_full = '0' then
+          block_response := '1';
           buffered_nonposted_cmd_avail := '0';
           response_cmd_out <= (others => '0');
           response_cmd_out_cmd <= "110000"; -- read response
@@ -406,7 +409,7 @@ begin
             state(regnum) <= READ_WAIT;
           end if;
         else
-          if response_cmd_full = '0' then
+          if block_response = '0' then
             buffered_nonposted_cmd_avail := '0';
             response_cmd_out <= (others => '0');
             response_cmd_out_cmd <= "110011"; -- target done
