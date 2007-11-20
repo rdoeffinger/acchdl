@@ -181,15 +181,18 @@ type data_array_t is array(0 to 7) of addblock;
 signal data_in : data_array_t;
 signal data_out : data_array_t;
 signal ready : std_logic_vector(7 downto 0);
-signal op : operation;
+type operation_array_t is array(0 to 7) of operation;
+signal op : operation_array_t;
 signal accreset : std_logic;
 signal sign : std_logic_vector(7 downto 0);
-signal pos : position;
+type position_array_t is array(0 to 7) of position;
+signal pos : position_array_t;
 type state_t is (START, READ_WAIT, READ_WAIT2);
-signal state : state_t;
+type state_array_t is array(0 to 7) of state_t;
+signal state : state_array_t;
 
 begin
-  regs : for I in 0 to 1 generate
+  regs : for I in 0 to 7 generate
   reg0 : accumulator port map (
     ready => ready(I),
     reset => accreset,
@@ -197,8 +200,8 @@ begin
     data_in => data_in(I),
     data_out => data_out(I),
     sign => sign(I),
-    pos => pos,
-    op => op
+    pos => pos(I),
+    op => op(I)
   );
   end generate;
   core : htxtop port map (
@@ -304,7 +307,7 @@ begin
   begin
     if reset_n = '0' then
       clock2 <= '0';
-      state <= START;
+      state <= (others => START);
       buffered_posted_cmd_avail := '0';
       buffered_posted_data_avail := '0';
       buffered_nonposted_cmd_avail := '0';
@@ -343,13 +346,13 @@ begin
       response_data_put <= '0';
 
       if clock2 = '1' and ready(0) = '1' then
-        if state = START then
-          op <= op_nop;
+        if state(0) = START then
+          op(0) <= op_nop;
         end if;
-        if state = READ_WAIT then
-          state <= READ_WAIT2;
+        if state(0) = READ_WAIT then
+          state(0) <= READ_WAIT2;
         end if;
-        if state = READ_WAIT2 then
+        if state(0) = READ_WAIT2 then
           buffered_nonposted_cmd_avail := '0';
           response_cmd_out <= (others => '0');
           response_cmd_out_cmd <= "110000"; -- read response
@@ -359,7 +362,7 @@ begin
           response_data_out <= data_out(0);
           response_cmd_put <= '1';
           response_data_put <= '1';
-          state <= START;
+          state(0) <= START;
         end if;
       end if;
 
@@ -367,14 +370,14 @@ begin
         if buffered_posted_cmd(5 downto 2) = "1011" then
           -- handle only posted doubleword writes
           if buffered_posted_data_avail = '1' and
-             state = START and
+             state(0) = START and
              clock2 = '1' and
              ready(0) = '1' then
             buffered_posted_cmd_avail := '0';
             data_in(0) <= std_logic_vector(unsigned(std_logic_vector'(X"0000000000"&"1"&buffered_posted_data(22 downto 0))) sll to_integer(unsigned(buffered_posted_data(27 downto 23))));
             sign(0) <= buffered_posted_data(31);
-            pos <= to_integer(unsigned(buffered_posted_data(30 downto 28)));
-            op <= op_add;
+            pos(0) <= to_integer(unsigned(buffered_posted_data(30 downto 28)));
+            op(0) <= op_add;
           end if;
         else
           buffered_posted_cmd_avail := '0';
@@ -386,12 +389,12 @@ begin
       if buffered_nonposted_cmd_avail = '1' then
         if buffered_nonposted_cmd(5 downto 4) = "01" then
           -- check for read request
-          if state = START and
+          if state(0) = START and
              clock2 = '1' and
              ready(0) = '1' then
-            pos <= to_integer(unsigned(buffered_nonposted_addr(5 downto 0)));
-            op <= op_output;
-            state <= READ_WAIT;
+            pos(0) <= to_integer(unsigned(buffered_nonposted_addr(5 downto 0)));
+            op(0) <= op_output;
+            state(0) <= READ_WAIT;
           end if;
         else
           if response_cmd_full = '0' then
