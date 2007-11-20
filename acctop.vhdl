@@ -379,7 +379,7 @@ begin
 
       if buffered_posted_cmd_avail = '1' then
         if buffered_posted_cmd(5 downto 2) = "1011" then
-          regnum := to_integer(unsigned(buffered_posted_addr(12+REGBITS-1 downto 12)));
+          regnum := to_integer(unsigned(buffered_posted_addr(10+REGBITS-1 downto 10)));
           -- handle only posted doubleword writes
           if buffered_posted_data_avail = '1' and
              state(regnum) = START and
@@ -400,7 +400,7 @@ begin
       end if;
       if buffered_nonposted_cmd_avail = '1' then
         if buffered_nonposted_cmd(5 downto 4) = "01" then
-          regnum := to_integer(unsigned(buffered_nonposted_addr(12+REGBITS-1 downto 12)));
+          regnum := to_integer(unsigned(buffered_nonposted_addr(10+REGBITS-1 downto 10)));
           -- check for read request
           if state(regnum) = START and
              clock2 = '1' and
