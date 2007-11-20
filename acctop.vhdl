@@ -177,8 +177,8 @@ alias response_cmd_out_unitid : std_logic_vector(5        - 1 downto 0) is respo
 alias response_cmd_out_tag    : std_logic_vector(TAG_LEN  - 1 downto 0) is response_cmd_out(TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
 alias response_cmd_out_format : std_logic_vector(3        - 1 downto 0) is response_cmd_out(95 downto 93);
 
-signal data_in : std_logic_vector(63 downto 0);
-signal data_out : std_logic_vector(63 downto 0);
+signal data_in : addblock;
+signal data_out : addblock;
 signal ready : std_logic;
 signal op : operation;
 signal accreset : std_logic;
