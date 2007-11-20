@@ -348,39 +348,42 @@ begin
       response_cmd_put <= '0';
       response_data_put <= '0';
 
-      if clock2 = '1' and ready(0) = '1' then
-        if state(0) = START then
-          op(0) <= op_nop;
+      for regnum in 0 to NUMREGS-1 loop
+      if clock2 = '1' and ready(regnum) = '1' then
+        if state(regnum) = START then
+          op(regnum) <= op_nop;
         end if;
-        if state(0) = READ_WAIT then
-          state(0) <= READ_WAIT2;
+        if state(regnum) = READ_WAIT then
+          state(regnum) <= READ_WAIT2;
         end if;
-        if state(0) = READ_WAIT2 then
+        if state(regnum) = READ_WAIT2 then
           buffered_nonposted_cmd_avail := '0';
           response_cmd_out <= (others => '0');
           response_cmd_out_cmd <= "110000"; -- read response
           response_cmd_out_unitid <= UnitID;
           response_cmd_out_tag <= buffered_nonposted_tag;
           response_cmd_out_format <= "011"; -- 32 bit, data attached
-          response_data_out <= data_out(0);
+          response_data_out <= data_out(regnum);
           response_cmd_put <= '1';
           response_data_put <= '1';
-          state(0) <= START;
+          state(regnum) <= START;
         end if;
       end if;
+      end loop;
 
       if buffered_posted_cmd_avail = '1' then
         if buffered_posted_cmd(5 downto 2) = "1011" then
+          regnum := to_integer(unsigned(buffered_posted_addr(14 downto 12)));
           -- handle only posted doubleword writes
           if buffered_posted_data_avail = '1' and
-             state(0) = START and
+             state(regnum) = START and
              clock2 = '1' and
-             ready(0) = '1' then
+             ready(regnum) = '1' then
             buffered_posted_cmd_avail := '0';
-            data_in(0) <= std_logic_vector(unsigned(std_logic_vector'(X"0000000000"&"1"&buffered_posted_data(22 downto 0))) sll to_integer(unsigned(buffered_posted_data(27 downto 23))));
-            sign(0) <= buffered_posted_data(31);
-            pos(0) <= to_integer(unsigned(buffered_posted_data(30 downto 28)));
-            op(0) <= op_add;
+            data_in(regnum) <= std_logic_vector(unsigned(std_logic_vector'(X"0000000000"&"1"&buffered_posted_data(22 downto 0))) sll to_integer(unsigned(buffered_posted_data(27 downto 23))));
+            sign(regnum) <= buffered_posted_data(31);
+            pos(regnum) <= to_integer(unsigned(buffered_posted_data(30 downto 28)));
+            op(regnum) <= op_add;
           end if;
         else
           buffered_posted_cmd_avail := '0';
@@ -391,13 +394,14 @@ begin
       end if;
       if buffered_nonposted_cmd_avail = '1' then
         if buffered_nonposted_cmd(5 downto 4) = "01" then
+          regnum := to_integer(unsigned(buffered_nonposted_addr(14 downto 12)));
           -- check for read request
-          if state(0) = START and
+          if state(regnum) = START and
              clock2 = '1' and
-             ready(0) = '1' then
-            pos(0) <= to_integer(unsigned(buffered_nonposted_addr(5 downto 0)));
-            op(0) <= op_output;
-            state(0) <= READ_WAIT;
+             ready(regnum) = '1' then
+            pos(regnum) <= to_integer(unsigned(buffered_nonposted_addr(5 downto 0)));
+            op(regnum) <= op_output;
+            state(regnum) <= READ_WAIT;
           end if;
         else
           if response_cmd_full = '0' then
