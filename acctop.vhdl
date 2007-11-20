@@ -177,7 +177,8 @@ alias response_cmd_out_unitid : std_logic_vector(5        - 1 downto 0) is respo
 alias response_cmd_out_tag    : std_logic_vector(TAG_LEN  - 1 downto 0) is response_cmd_out(TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
 alias response_cmd_out_format : std_logic_vector(3        - 1 downto 0) is response_cmd_out(95 downto 93);
 
-constant NUMREGS : integer := 8;
+constant NUMREGS : integer := 2;
+constant REGBITS : integer := 1;
 type data_array_t is array(0 to NUMREGS-1) of addblock;
 signal data_in : data_array_t;
 signal data_out : data_array_t;
@@ -193,7 +194,7 @@ type state_array_t is array(0 to NUMREGS-1) of state_t;
 signal state : state_array_t;
 
 begin
-  regs : for I in 0 to 7 generate
+  regs : for I in 0 to NUMREGS-1 generate
   reg0 : accumulator port map (
     ready => ready(I),
     reset => accreset,
@@ -378,7 +379,7 @@ begin
 
       if buffered_posted_cmd_avail = '1' then
         if buffered_posted_cmd(5 downto 2) = "1011" then
-          regnum := to_integer(unsigned(buffered_posted_addr(14 downto 12)));
+          regnum := to_integer(unsigned(buffered_posted_addr(12+REGBITS-1 downto 12)));
           -- handle only posted doubleword writes
           if buffered_posted_data_avail = '1' and
              state(regnum) = START and
@@ -399,7 +400,7 @@ begin
       end if;
       if buffered_nonposted_cmd_avail = '1' then
         if buffered_nonposted_cmd(5 downto 4) = "01" then
-          regnum := to_integer(unsigned(buffered_nonposted_addr(14 downto 12)));
+          regnum := to_integer(unsigned(buffered_nonposted_addr(12+REGBITS-1 downto 12)));
           -- check for read request
           if state(regnum) = START and
              clock2 = '1' and
