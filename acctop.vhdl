@@ -356,7 +356,9 @@ begin
         if state(regnum) = READ_WAIT then
           state(regnum) <= READ_WAIT2;
         end if;
-        if state(regnum) = READ_WAIT2 then
+        if state(regnum) = READ_WAIT2 and
+           response_cmd_full = '0' and
+           response_data_full = '0' then
           buffered_nonposted_cmd_avail := '0';
           response_cmd_out <= (others => '0');
           response_cmd_out_cmd <= "110000"; -- read response
