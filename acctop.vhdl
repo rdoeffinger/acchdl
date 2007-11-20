@@ -310,6 +310,7 @@ begin
     if reset_n = '0' then
       clock2 <= '0';
       state <= (others => START);
+      op <= (others => op_nop);
       buffered_posted_cmd_avail := '0';
       buffered_posted_data_avail := '0';
       buffered_nonposted_cmd_avail := '0';
