@@ -276,10 +276,8 @@ begin
   -- we do not have outgoing posted or nonposted messages
   nonposted_cmd_put <= '0';
   nonposted_data_put <= '0';
-  nonposted_data_complete <= '0';
   posted_cmd_put <= '0';
   posted_data_put <= '0';
-  posted_data_complete <= '0';
 
   -- no idea why...
   response_data_complete <= '0';
@@ -309,6 +307,8 @@ begin
       buffered_nonposted_cmd_avail := '0';
       buffered_nonposted_data_avail := '0';
     elsif rising_edge(clock) then
+      posted_data_complete <= '0';
+      nonposted_data_complete <= '0';
       if posted_cmd_empty = '0' and
          buffered_posted_cmd_avail = '0' then
         buffered_posted_cmd_avail := '1';
@@ -317,6 +317,7 @@ begin
       end if;
       if posted_data_empty = '0' and
          buffered_posted_data_avail = '0' then
+        posted_data_complete <= '1';
         buffered_posted_data_avail := '1';
         buffered_posted_data := posted_data_in;
       end if;
@@ -329,6 +330,7 @@ begin
       end if;
       if nonposted_data_empty = '0' and
          buffered_nonposted_data_avail = '0' then
+        nonposted_data_complete <= '1';
         buffered_nonposted_data_avail := '1';
         buffered_nonposted_data := posted_data_in;
       end if;
@@ -366,7 +368,6 @@ begin
              clock2 = '1' and
              ready = '1' then
             buffered_posted_cmd_avail := '0';
-            buffered_posted_data_avail := '0';
             data_in <= std_logic_vector(unsigned(std_logic_vector'(X"0000000000"&"1"&buffered_posted_data(22 downto 0))) sll to_integer(unsigned(buffered_posted_data(27 downto 23))));
             sign <= buffered_posted_data(31);
             pos <= to_integer(unsigned(buffered_posted_data(30 downto 28)));
@@ -374,8 +375,10 @@ begin
           end if;
         else
           buffered_posted_cmd_avail := '0';
-          buffered_posted_data_avail := '0';
         end if;
+      end if;
+      if buffered_posted_cmd_avail = '0' then
+        buffered_posted_data_avail := '0';
       end if;
       if buffered_nonposted_cmd_avail = '1' then
         if buffered_nonposted_cmd(5 downto 4) = "01" then
