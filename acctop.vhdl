@@ -177,18 +177,19 @@ alias response_cmd_out_unitid : std_logic_vector(5        - 1 downto 0) is respo
 alias response_cmd_out_tag    : std_logic_vector(TAG_LEN  - 1 downto 0) is response_cmd_out(TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
 alias response_cmd_out_format : std_logic_vector(3        - 1 downto 0) is response_cmd_out(95 downto 93);
 
-type data_array_t is array(0 to 7) of addblock;
+constant NUMREGS := 8;
+type data_array_t is array(0 to NUMREGS-1) of addblock;
 signal data_in : data_array_t;
 signal data_out : data_array_t;
-signal ready : std_logic_vector(7 downto 0);
-type operation_array_t is array(0 to 7) of operation;
+signal ready : std_logic_vector(NUMREGS-1 downto 0);
+type operation_array_t is array(0 to NUMREGS-1) of operation;
 signal op : operation_array_t;
 signal accreset : std_logic;
-signal sign : std_logic_vector(7 downto 0);
-type position_array_t is array(0 to 7) of position;
+signal sign : std_logic_vector(NUMREGS-1 downto 0);
+type position_array_t is array(0 to NUMREGS-1) of position;
 signal pos : position_array_t;
 type state_t is (START, READ_WAIT, READ_WAIT2);
-type state_array_t is array(0 to 7) of state_t;
+type state_array_t is array(0 to NUMREGS-1) of state_t;
 signal state : state_array_t;
 
 begin
