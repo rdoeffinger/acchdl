@@ -364,7 +364,7 @@ begin
         if buffered_posted_cmd(5 downto 2) = "1011" then
           -- handle only posted doubleword writes
           if buffered_posted_data_avail = '1' and
-             STATE = start and
+             state = START and
              clock2 = '1' and
              ready = '1' then
             buffered_posted_cmd_avail := '0';
@@ -383,7 +383,7 @@ begin
       if buffered_nonposted_cmd_avail = '1' then
         if buffered_nonposted_cmd(5 downto 4) = "01" then
           -- check for read request
-          if STATE = start and
+          if state = START and
              clock2 = '1' and
              ready = '1' then
             pos <= to_integer(unsigned(buffered_nonposted_addr(5 downto 0)));

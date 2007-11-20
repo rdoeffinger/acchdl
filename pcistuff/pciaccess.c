@@ -77,9 +77,17 @@ int process_command(volatile uint8_t *mapped) {
   if (strcmp(buffer, "q") == 0 || strcmp(buffer, "quit") == 0)
     return 0;
   if (strcmp(buffer, "b") == 0) {
-    int i;
-    for (i = 0; i < 2; i++)
-      mapped_float[0] = 1.0;
+    int i = 100000000;
+    do {
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+      mapped_float[0] = 2.0;
+    } while (--i);
 //    printf("%016"PRIx64"\n", mapped_64[2]);
   } else if (par1 && strcmp(buffer, "r64") == 0) {
     printf("%016"PRIx64"\n", mapped_64[addr]);
@@ -136,6 +144,17 @@ void *map_physical(off_t base, size_t size) {
   return mapped;
 }
 
+void uncachable(off_t base, size_t size) {
+  int fd;
+  char buffer[256];
+  snprintf(buffer, sizeof(buffer),
+           "base=0x%08"PRIx64" size=0x%08"PRIx64" type=uncachable\n",
+           (uint64_t)base, (uint64_t)size);
+  fd = open("/proc/mtrr", O_WRONLY);
+  write(fd, buffer, strlen(buffer));
+  close(fd);
+}
+
 int main(int argc, char *argv[]) {
   size_t map_size = 0;
   off_t map_base = 0;
@@ -153,6 +172,8 @@ int main(int argc, char *argv[]) {
     printf("mmap of PCI device failed\n");
     return 1;
   }
+  printf("setting uncachable (check /proc/mtrr if it worked)\n");
+  uncachable(map_base, map_size);
   while (1) {
     printf("\n>"); fflush(stdout);
     if (!process_command(mapped)) break;
