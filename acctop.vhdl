@@ -177,27 +177,30 @@ alias response_cmd_out_unitid : std_logic_vector(5        - 1 downto 0) is respo
 alias response_cmd_out_tag    : std_logic_vector(TAG_LEN  - 1 downto 0) is response_cmd_out(TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
 alias response_cmd_out_format : std_logic_vector(3        - 1 downto 0) is response_cmd_out(95 downto 93);
 
-signal data_in : std_logic_vector(63 downto 0);
-signal data_out : std_logic_vector(63 downto 0);
-signal ready : std_logic;
+type data_array_t is array(7 to 0) of addblock;
+signal data_in : data_array_t;
+signal data_out : data_array_t;
+signal ready : std_logic_vector(7 downto 0);
 signal op : operation;
 signal accreset : std_logic;
-signal sign : std_logic;
+signal sign : std_logic_vector(7 downto 0);
 signal pos : position;
 type state_t is (START, READ_WAIT, READ_WAIT2);
 signal state : state_t;
 
 begin
+  regs : for I in 0 to 1 generate
   reg0 : accumulator port map (
-    ready => ready,
+    ready => ready(I),
     reset => accreset,
     clock => clock2,
-    data_in => data_in,
-    data_out => data_out,
-    sign => sign,
+    data_in => data_in(I),
+    data_out => data_out(I),
+    sign => sign(I),
     pos => pos,
     op => op
   );
+  end generate;
   core : htxtop port map (
     PWROK            => HTX_PWROK     ,
     RESET_N          => HTX_RES_N     ,
@@ -339,7 +342,7 @@ begin
       response_cmd_put <= '0';
       response_data_put <= '0';
 
-      if clock2 = '1' and ready = '1' then
+      if clock2 = '1' and ready(0) = '1' then
         if state = START then
           op <= op_nop;
         end if;
@@ -353,7 +356,7 @@ begin
           response_cmd_out_unitid <= UnitID;
           response_cmd_out_tag <= buffered_nonposted_tag;
           response_cmd_out_format <= "011"; -- 32 bit, data attached
-          response_data_out <= data_out;
+          response_data_out <= data_out(0);
           response_cmd_put <= '1';
           response_data_put <= '1';
           state <= START;
@@ -366,10 +369,10 @@ begin
           if buffered_posted_data_avail = '1' and
              state = START and
              clock2 = '1' and
-             ready = '1' then
+             ready(0) = '1' then
             buffered_posted_cmd_avail := '0';
-            data_in <= std_logic_vector(unsigned(std_logic_vector'(X"0000000000"&"1"&buffered_posted_data(22 downto 0))) sll to_integer(unsigned(buffered_posted_data(27 downto 23))));
-            sign <= buffered_posted_data(31);
+            data_in(0) <= std_logic_vector(unsigned(std_logic_vector'(X"0000000000"&"1"&buffered_posted_data(22 downto 0))) sll to_integer(unsigned(buffered_posted_data(27 downto 23))));
+            sign(0) <= buffered_posted_data(31);
             pos <= to_integer(unsigned(buffered_posted_data(30 downto 28)));
             op <= op_add;
           end if;
@@ -385,7 +388,7 @@ begin
           -- check for read request
           if state = START and
              clock2 = '1' and
-             ready = '1' then
+             ready(0) = '1' then
             pos <= to_integer(unsigned(buffered_nonposted_addr(5 downto 0)));
             op <= op_output;
             state <= READ_WAIT;
