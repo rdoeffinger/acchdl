@@ -284,6 +284,7 @@ begin
   -- we do not have outgoing posted or nonposted messages
   nonposted_cmd_put <= '0';
   nonposted_data_put <= '0';
+  nonposted_data_complete <= '0';
   posted_cmd_put <= '0';
   posted_data_put <= '0';
 
@@ -313,13 +314,19 @@ begin
       clock2 <= '0';
       state <= (others => START);
       op <= (others => op_nop);
+      posted_data_complete <= '0';
+      response_cmd_put <= '0';
+      response_data_put <= '0';
+      posted_cmd_get <= '0';
+      posted_data_get <= '0';
+      nonposted_cmd_get <= '0';
+      nonposted_data_get <= '0';
       buffered_posted_cmd_avail := '0';
       buffered_posted_data_avail := '0';
       buffered_nonposted_cmd_avail := '0';
       buffered_nonposted_data_avail := '0';
     elsif rising_edge(clock) then
       posted_data_complete <= '0';
-      nonposted_data_complete <= '0';
       if posted_cmd_empty = '0' and
          buffered_posted_cmd_avail = '0' then
         buffered_posted_cmd_avail := '1';
@@ -341,7 +348,6 @@ begin
       end if;
       if nonposted_data_empty = '0' and
          buffered_nonposted_data_avail = '0' then
-        nonposted_data_complete <= '1';
         buffered_nonposted_data_avail := '1';
         buffered_nonposted_data := posted_data_in;
       end if;
