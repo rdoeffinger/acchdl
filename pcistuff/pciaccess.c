@@ -102,6 +102,12 @@ int process_command(volatile uint8_t *mapped) {
   } else if (par1 && par2 && strcmp(buffer, "w32") == 0) {
     mapped_32[addr] = vali;
   } else if (par1 && par2 && strcmp(buffer, "wf") == 0) {
+    union {
+      float f;
+      uint32_t i;
+    } dbg;
+    dbg.f = valf;
+printf("%08x\n", dbg.i);
     mapped_float[addr] = valf;
   } else if (par1 && par2 && strcmp(buffer, "wd") == 0) {
     mapped_double[addr] = valf;
