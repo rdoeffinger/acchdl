@@ -318,10 +318,10 @@ begin
       posted_data_complete <= '0';
       response_cmd_put <= '0';
       response_data_put <= '0';
-      posted_cmd_get <= '0';
-      posted_data_get <= '0';
-      nonposted_cmd_get <= '0';
-      nonposted_data_get <= '0';
+      posted_cmd_get <= '1';
+      posted_data_get <= '1';
+      nonposted_cmd_get <= '1';
+      nonposted_data_get <= '1';
       buffered_posted_cmd_avail := '0';
       buffered_posted_data_avail := '0';
       buffered_nonposted_cmd_avail := '0';
