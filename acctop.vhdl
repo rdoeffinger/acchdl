@@ -5,7 +5,6 @@ use accumulator_types.all;
 
 entity acctop is
   port(
-    clock_output : out std_logic;
     HTX_PWROK : in std_logic;
     HTX_RES_N : in std_logic;
     HTX_LDTSTOP_N : in std_logic;
@@ -292,8 +291,6 @@ begin
   response_data_complete <= '0';
 
   accreset <= not reset_n;
-
-  clock_output <= clock;
 
   process (clock, reset_n)
   variable regnum : integer range 0 to NUMREGS-1;
