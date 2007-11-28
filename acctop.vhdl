@@ -177,8 +177,8 @@ alias response_cmd_out_unitid : std_logic_vector(5        - 1 downto 0) is respo
 alias response_cmd_out_tag    : std_logic_vector(TAG_LEN  - 1 downto 0) is response_cmd_out(TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
 alias response_cmd_out_format : std_logic_vector(3        - 1 downto 0) is response_cmd_out(95 downto 93);
 
-constant NUMREGS : integer := 2;
-constant REGBITS : integer := 1;
+constant NUMREGS : integer := 4;
+constant REGBITS : integer := 2;
 type data_array_t is array(0 to NUMREGS-1) of addblock;
 signal data_in : data_array_t;
 signal data_out : data_array_t;
@@ -190,8 +190,8 @@ signal sign : std_logic_vector(NUMREGS-1 downto 0);
 type position_array_t is array(0 to NUMREGS-1) of position;
 signal pos : position_array_t;
 type state_t is (START, READ_WAIT, READ_WAIT2);
-type state_array_t is array(0 to NUMREGS-1) of state_t;
-signal state : state_array_t;
+signal state : state_t;
+signal readreg : natural range 0 to NUMREGS - 1;
 
 begin
   regs : for I in 0 to NUMREGS-1 generate
@@ -297,7 +297,6 @@ begin
 
   process (clock, reset_n)
   variable regnum : integer range 0 to NUMREGS-1;
-  variable block_response : std_logic;
   variable buffered_posted_cmd_avail : std_logic;
   variable buffered_posted_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
   variable buffered_posted_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
@@ -312,7 +311,7 @@ begin
   begin
     if reset_n = '0' then
       clock2 <= '0';
-      state <= (others => START);
+      state <= START;
       op <= (others => op_nop);
       posted_data_complete <= '0';
       response_cmd_put <= '0';
@@ -355,20 +354,18 @@ begin
       clock2 <= not clock2;
       response_cmd_put <= '0';
       response_data_put <= '0';
-      block_response := response_cmd_full;
 
       for regnum in 0 to NUMREGS-1 loop
       if clock2 = '1' and ready(regnum) = '1' then
-        if state(regnum) = START then
+        if state = START or regnum /= readreg then
           op(regnum) <= op_nop;
         end if;
-        if state(regnum) = READ_WAIT then
-          state(regnum) <= READ_WAIT2;
+        if state = READ_WAIT and regnum = readreg then
+          state <= READ_WAIT2;
         end if;
-        if state(regnum) = READ_WAIT2 and
-           block_response = '0' and
+        if state = READ_WAIT2 and regnum = readreg and
+           response_cmd_full = '0' and
            response_data_full = '0' then
-          block_response := '1';
           buffered_nonposted_cmd_avail := '0';
           response_cmd_out <= (others => '0');
           response_cmd_out_cmd <= "110000"; -- read response
@@ -378,7 +375,7 @@ begin
           response_data_out <= data_out(regnum);
           response_cmd_put <= '1';
           response_data_put <= '1';
-          state(regnum) <= START;
+          state <= START;
         end if;
       end if;
       end loop;
@@ -388,7 +385,7 @@ begin
           regnum := to_integer(unsigned(buffered_posted_addr(10+REGBITS-1 downto 10)));
           -- handle only posted doubleword writes
           if buffered_posted_data_avail = '1' and
-             state(regnum) = START and
+             (state = START or regnum /= readreg) and
              clock2 = '1' and
              ready(regnum) = '1' then
             buffered_posted_cmd_avail := '0';
@@ -404,19 +401,19 @@ begin
       if buffered_posted_cmd_avail = '0' then
         buffered_posted_data_avail := '0';
       end if;
-      if buffered_nonposted_cmd_avail = '1' then
+      if state = START and buffered_nonposted_cmd_avail = '1' then
         if buffered_nonposted_cmd(5 downto 4) = "01" then
           regnum := to_integer(unsigned(buffered_nonposted_addr(10+REGBITS-1 downto 10)));
           -- check for read request
-          if state(regnum) = START and
-             clock2 = '1' and
+          if clock2 = '1' and
              ready(regnum) = '1' then
             pos(regnum) <= to_integer(unsigned(buffered_nonposted_addr(5 downto 0)));
             op(regnum) <= op_output;
-            state(regnum) <= READ_WAIT;
+            state <= READ_WAIT;
+            readreg <= regnum;
           end if;
         else
-          if block_response = '0' then
+          if response_cmd_full = '0' then
             buffered_nonposted_cmd_avail := '0';
             response_cmd_out <= (others => '0');
             response_cmd_out_cmd <= "110011"; -- target done
