@@ -312,7 +312,9 @@ begin
     if reset_n = '0' then
       clock2 <= '0';
       state <= START;
-      op <= (others => op_nop);
+      for regnum in 0 to NUMREGS-1 loop
+        op(regnum) <= op_nop;
+      end loop;
       posted_data_complete <= '0';
       response_cmd_put <= '0';
       response_data_put <= '0';
