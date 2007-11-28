@@ -389,7 +389,7 @@ begin
              clock2 = '1' and
              ready(regnum) = '1' then
             buffered_posted_cmd_avail := '0';
-            data_in(regnum) <= addblock(unsigned(addblock'(X"0000000000"&"1"&buffered_posted_data(22 downto 0))) sll to_integer(unsigned(buffered_posted_data(27 downto 23))));;
+            data_in(regnum) <= addblock(unsigned(addblock'(X"0000000000"&"1"&buffered_posted_data(22 downto 0))) sll to_integer(unsigned(buffered_posted_data(27 downto 23))));
             sign(regnum) <= buffered_posted_data(31);
             pos(regnum) <= to_integer(unsigned(buffered_posted_data(30 downto 28)));
             op(regnum) <= op_add;
