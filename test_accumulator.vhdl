@@ -24,7 +24,7 @@ architecture behaviour of test_accumulator is
 
   type datas_t is array (0 to NUMTESTS - 1) of addblock;
   constant datas : datas_t := (
-    (others => 'Z'), (others => '1'), (others => '1'), (others => '1'),
+    (others => 'Z'), X"0123456789abcdef", X"19acdefffffff000", (others => '1'),
     (others => 'Z')
   );
 
