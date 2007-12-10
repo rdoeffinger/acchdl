@@ -408,11 +408,11 @@ begin
       if buffered_posted_cmd_avail = '0' then
         buffered_posted_data_avail := '0';
       end if;
-      if state = START and buffered_nonposted_cmd_avail = '1' then
+      if buffered_nonposted_cmd_avail = '1' then
         if buffered_nonposted_cmd(5 downto 4) = "01" then
           regnum := to_integer(unsigned(buffered_nonposted_addr(10+REGBITS-1 downto 10)));
           -- check for read request
-          if clock2 = '1' and
+          if state = START and clock2 = '1' and
              ready(regnum) = '1' then
             pos(regnum) <= to_integer(unsigned(buffered_nonposted_addr(5 downto 0)));
             op(regnum) <= op_output;
