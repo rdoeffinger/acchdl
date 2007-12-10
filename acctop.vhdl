@@ -420,7 +420,7 @@ begin
             readreg <= regnum;
           end if;
         else
-          if response_cmd_full = '0' then
+          if state /= READ_WAIT2 and response_cmd_full = '0' then
             buffered_nonposted_cmd_avail := '0';
             response_cmd_out <= (others => '0');
             response_cmd_out_cmd <= "110011"; -- target done
