@@ -375,7 +375,7 @@ begin
             op(readreg) <= op_nop;
             state <= START;
           end if;
-		  end if;
+        end if;
         for regnum in 0 to NUMREGS-1 loop
           if ready(regnum) = '1' and
              (state = START or regnum /= readreg) then
