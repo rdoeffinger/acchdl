@@ -51,8 +51,6 @@ end accumulator;
 architecture behaviour of accumulator is
   type state_t is (st_ready, st_add1, st_add2, st_out, st_fixcarry);
 
-  constant allone : subblock := (others => '1');
-  constant allzero : subblock := (others => '0');
   signal accu : accutype;
   signal allmask : flagtype;
   signal allvalue : flagtype;
@@ -68,7 +66,6 @@ begin
   data_out <= out_buf;
 
   process(clock,reset)
-    variable outbuf : addblock;
     variable replicate : subblock;
     variable curval : subblock;
     variable carry : std_logic;
@@ -146,6 +143,7 @@ begin
     if reset = '1' then
       allmask <= (others => '1');
       allvalue <= (others => '0');
+      out_buf <= (others => '0');
       state <= st_ready;
     elsif clock'event and clock = '1' then
 -- start load
@@ -158,7 +156,6 @@ begin
       case state is
       when st_out =>
         out_buf(BLOCKSIZE-1 downto 0) <= curval;
-        out_buf(2*BLOCKSIZE-1 downto BLOCKSIZE) <= (others => '0');
         state <= st_ready;
       when st_add1 =>
         carry := '0';
