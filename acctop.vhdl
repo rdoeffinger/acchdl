@@ -393,13 +393,23 @@ begin
              clock2 = '1' and
              ready(regnum) = '1' then
             buffered_posted_cmd_avail := '0';
+            if buffered_posted_addr(9) = '1' then
+              data_in(regnum) <= buffered_posted_data;
+              pos(regnum) <= to_integer(unsigned(buffered_posted_addr(8 downto 0))) - 256;
+              if buffered_posted_addr(8 downto 0) = X"00"&"0" then
+                op(regnum) <= op_writeflags;
+              else
+                op(regnum) <= op_writeblock;
+              end if;
+            else
             shift_cnt := to_integer(unsigned(buffered_posted_data(27 downto 23)));
             tmp := X"0000000000"&"1"&buffered_posted_data(22 downto 0);
             tmp := addblock(unsigned(tmp) sll shift_cnt);
             data_in(regnum) <= tmp;
             sign(regnum) <= buffered_posted_data(31);
-            pos(regnum) <= to_integer(unsigned(buffered_posted_data(30 downto 28)));
+            pos(regnum) <= to_integer(unsigned(buffered_posted_data(30 downto 28))) - 4;
             op(regnum) <= op_add;
+            end if;
           end if;
         else
           buffered_posted_cmd_avail := '0';
@@ -414,8 +424,12 @@ begin
           -- check for read request
           if state = START and clock2 = '1' and
              ready(regnum) = '1' then
-            pos(regnum) <= to_integer(unsigned(buffered_nonposted_addr(5 downto 0)));
-            op(regnum) <= op_output;
+            pos(regnum) <= to_integer(unsigned(buffered_nonposted_addr(8 downto 0))) - 256;
+            if buffered_nonposted_addr(8 downto 0) = X"00"&"0" then
+              op(regnum) <= op_readflags;
+            else
+              op(regnum) <= op_readblock;
+            end if;
             state <= READ_WAIT;
             readreg <= regnum;
           end if;

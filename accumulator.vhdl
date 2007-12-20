@@ -12,8 +12,9 @@ package accumulator_types is
   subtype subblock is std_logic_vector(BLOCKSIZE-1 downto 0);
   type accutype is array (NUMBLOCKS-1 downto 0) of subblock;
   subtype flagtype is std_logic_vector(NUMBLOCKS downto 0);
-  subtype position is natural range 0 to NUMBLOCKS-2;
-  type operation is (op_nop, op_add, op_output);
+  subtype position is integer range -256 to 255;
+  type operation is (op_nop, op_add, op_readblock, op_writeblock,
+                     op_readflags, op_writeflags);
   component accumulator is
     port (
       ready : out std_logic;
@@ -49,7 +50,8 @@ entity accumulator is
 end accumulator;
 
 architecture behaviour of accumulator is
-  type state_t is (st_ready, st_add1, st_add2, st_out, st_fixcarry);
+  type state_t is (st_ready, st_add1, st_add2, st_out_block,
+                   st_in_block, st_out_status, st_in_status, st_fixcarry);
 
   signal accu : accutype;
   signal allmask : flagtype;
@@ -154,8 +156,25 @@ begin
       end if;
 -- end load
       case state is
-      when st_out =>
+      when st_out_block =>
         out_buf(BLOCKSIZE-1 downto 0) <= curval;
+        state <= st_ready;
+      when st_in_block =>
+        curval := input(BLOCKSIZE-1 downto 0);
+        state <= st_ready;
+      when st_out_status =>
+        out_buf(31 downto 16) <= X"0003"; -- valid flags
+        out_buf(15 downto 2) <= (others => '0');
+        out_buf(1) <= not allmask(NUMBLOCKS);
+        out_buf(0) <= allvalue(NUMBLOCKS);
+        state <= st_ready;
+      when st_in_status =>
+        if input(17) = '1' then
+          allmask(NUMBLOCKS) <= not input(1);
+        end if;
+        if input(16) = '1' then
+          allvalue(NUMBLOCKS) <= input(0);
+        end if;
         state <= st_ready;
       when st_add1 =>
         carry := '0';
@@ -177,13 +196,16 @@ begin
         state <= st_ready;
       when st_ready =>
 -- copy inputs for use in next cycles
-        addpos <= pos;
+        addpos <= pos + NUMBLOCKS / 2;
         sig_sign <= sign;
         input <= data_in;
         case op is
         when op_nop => null;
         when op_add => state <= st_add1;
-        when op_output => state <= st_out;
+        when op_readblock => state <= st_out_block;
+        when op_writeblock => state <= st_in_block;
+        when op_readflags => state <= st_out_status;
+        when op_writeflags => state <= st_in_status;
         end case;
       end case;
  -- start store
