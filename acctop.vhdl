@@ -402,23 +402,23 @@ begin
                 op(regnum) <= op_writeblock;
               end if;
             else
-            tmp := X"0000000000"&"1"&buffered_posted_data(22 downto 0);
-            if buffered_posted_data(30 downto 23) = X"00" then
-              tmp(24) := '0'; -- denormalized value
-            elsif buffered_posted_data(30 downto 23) = X"11" then
-              tmp := (others => '0'); -- ignore Inf and NaN for now
-            else
-              shift_cnt := to_integer(unsigned(buffered_posted_data(27 downto 23)));
-              tmp := addblock(unsigned(tmp) sll shift_cnt);
-            end if;
-            sign(regnum) <= buffered_posted_data(31) xor buffered_posted_addr(8);
-            if (buffered_posted_data(31) xor buffered_posted_addr(8)) = '1' then
-              -- we need two's complement representation
-              tmp := addblock(unsigned(not tmp) + 1);
-            end if;
-            data_in(regnum) <= tmp;
-            pos(regnum) <= to_integer(unsigned(buffered_posted_data(30 downto 28))) - 4;
-            op(regnum) <= op_add;
+              tmp := X"0000000000"&"1"&buffered_posted_data(22 downto 0);
+              if buffered_posted_data(30 downto 23) = X"00" then
+                tmp(24) := '0'; -- denormalized value
+              elsif buffered_posted_data(30 downto 23) = X"11" then
+                tmp := (others => '0'); -- ignore Inf and NaN for now
+              else
+                shift_cnt := to_integer(unsigned(buffered_posted_data(27 downto 23)));
+                tmp := addblock(unsigned(tmp) sll shift_cnt);
+              end if;
+              sign(regnum) <= buffered_posted_data(31) xor buffered_posted_addr(8);
+              if (buffered_posted_data(31) xor buffered_posted_addr(8)) = '1' then
+                -- we need two's complement representation
+                tmp := addblock(unsigned(not tmp) + 1);
+              end if;
+              data_in(regnum) <= tmp;
+              pos(regnum) <= to_integer(unsigned(buffered_posted_data(30 downto 28))) - 4;
+              op(regnum) <= op_add;
             end if;
           end if;
         else
@@ -436,11 +436,11 @@ begin
              ready(regnum) = '1' then
             pos(regnum) <= to_integer(unsigned(buffered_nonposted_addr(8 downto 0))) - 256;
             if buffered_nonposted_addr(9) = '1' then
-            if buffered_nonposted_addr(8 downto 0) = X"00"&"0" then
-              op(regnum) <= op_readflags;
-            else
-              op(regnum) <= op_readblock;
-            end if;
+              if buffered_nonposted_addr(8 downto 0) = X"00"&"0" then
+                op(regnum) <= op_readflags;
+              else
+                op(regnum) <= op_readblock;
+              end if;
             else
               op(regnum) <= op_readfloat;
             end if;
