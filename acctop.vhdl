@@ -404,7 +404,9 @@ begin
             else
             tmp := X"0000000000"&"1"&buffered_posted_data(22 downto 0);
             if buffered_posted_data(30 downto 23) = X"00" then
-              tmp(24) = '0'; -- denormalized value
+              tmp(24) := '0'; -- denormalized value
+            elsif buffered_posted_data(30 downto 23) = X"11" then
+              tmp := (others => '0'); -- ignore Inf and NaN for now
             else
               shift_cnt := to_integer(unsigned(buffered_posted_data(27 downto 23)));
               tmp := addblock(unsigned(tmp) sll shift_cnt);
