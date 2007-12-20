@@ -14,7 +14,7 @@ package accumulator_types is
   subtype flagtype is std_logic_vector(NUMBLOCKS downto 0);
   subtype position is integer range -256 to 255;
   type operation is (op_nop, op_add, op_readblock, op_writeblock,
-                     op_readflags, op_writeflags);
+                     op_readflags, op_writeflags, op_readfloat);
   component accumulator is
     port (
       ready : out std_logic;
@@ -51,7 +51,8 @@ end accumulator;
 
 architecture behaviour of accumulator is
   type state_t is (st_ready, st_add1, st_add2, st_out_block,
-                   st_in_block, st_out_status, st_in_status, st_fixcarry);
+                   st_in_block, st_out_status, st_in_status, st_fixcarry,
+                   st_out_float1);
 
   signal accu : accutype;
   signal allmask : flagtype;
@@ -194,6 +195,9 @@ begin
       when st_fixcarry =>
         fixcarry(sig_sign, curval);
         state <= st_ready;
+      when st_out_float1 =>
+        out_buf(BLOCKSIZE-1 downto 0) <= curval;
+        state <= st_ready;
       when st_ready =>
 -- copy inputs for use in next cycles
         addpos <= pos + NUMBLOCKS / 2;
@@ -206,6 +210,16 @@ begin
         when op_writeblock => state <= st_in_block;
         when op_readflags => state <= st_out_status;
         when op_writeflags => state <= st_in_status;
+        when op_readfloat =>
+          addpos <= 0;
+          for next_addpos in NUMBLOCKS - 1 downto 0 loop
+            if allmask(next_addpos) = '0' or
+               allvalue(next_addpos) /= allvalue(NUMBLOCKS) then
+              addpos <= next_addpos;
+              exit;
+            end if;
+          end loop;
+          state <= st_out_float1;
         end case;
       end case;
  -- start store

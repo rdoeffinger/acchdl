@@ -425,10 +425,14 @@ begin
           if state = START and clock2 = '1' and
              ready(regnum) = '1' then
             pos(regnum) <= to_integer(unsigned(buffered_nonposted_addr(8 downto 0))) - 256;
+            if buffered_nonposted_addr(9) = '1' then
             if buffered_nonposted_addr(8 downto 0) = X"00"&"0" then
               op(regnum) <= op_readflags;
             else
               op(regnum) <= op_readblock;
+            end if;
+            else
+              op(regnum) <= op_readfloat;
             end if;
             state <= READ_WAIT;
             readreg <= regnum;
