@@ -402,9 +402,13 @@ begin
                 op(regnum) <= op_writeblock;
               end if;
             else
-            shift_cnt := to_integer(unsigned(buffered_posted_data(27 downto 23)));
             tmp := X"0000000000"&"1"&buffered_posted_data(22 downto 0);
-            tmp := addblock(unsigned(tmp) sll shift_cnt);
+            if buffered_posted_data(30 downto 23) = X"00" then
+              tmp(24) = '0'; -- denormalized value
+            else
+              shift_cnt := to_integer(unsigned(buffered_posted_data(27 downto 23)));
+              tmp := addblock(unsigned(tmp) sll shift_cnt);
+            end if;
             sign(regnum) <= buffered_posted_data(31) xor buffered_posted_addr(8);
             if (buffered_posted_data(31) xor buffered_posted_addr(8)) = '1' then
               -- we need two's complement representation
