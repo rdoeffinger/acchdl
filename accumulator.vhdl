@@ -4,10 +4,8 @@ use ieee.numeric_std.all;
 
 package accumulator_types is
   constant BLOCKSIZE : integer := 32;
-  constant BLOCKBITS : integer := 5;
-  constant NUMBLOCKS : integer := 19;
---  constant BLOCKBITS : integer := 7;
---  constant NUMBLOCKS : integer := 68;
+  constant BLOCKBITS : integer := 4;
+  constant NUMBLOCKS : integer := 11;
   subtype addblock is std_logic_vector(2*BLOCKSIZE-1 downto 0);
   subtype subblock is std_logic_vector(BLOCKSIZE-1 downto 0);
   type accutype is array (NUMBLOCKS-1 downto 0) of subblock;
@@ -94,30 +92,25 @@ begin
         tmp := tmp2 and not tmp;
         tmp2 := tmp2 and not tmp;
       end if;
-      if (tmp and X"aaaaa") /= X"00000" then
+      if (tmp and X"aaa") /= X"000" then
         cptmp(0) := '1';
       else
         cptmp(0) := '0';
       end if;
-      if (tmp and X"ccccc") /= X"00000" then
+      if (tmp and X"ccc") /= X"000" then
         cptmp(1) := '1';
       else
         cptmp(1) := '0';
       end if;
-      if (tmp and X"0f0f0") /= X"00000" then
+      if (tmp and X"0f0") /= X"000" then
         cptmp(2) := '1';
       else
         cptmp(2) := '0';
       end if;
-      if (tmp and X"0ff00") /= X"00000" then
+      if (tmp and X"f00") /= X"000" then
         cptmp(3) := '1';
       else
         cptmp(3) := '0';
-      end if;
-      if (tmp and X"f0000") /= X"00000" then
-        cptmp(4) := '1';
-      else
-        cptmp(4) := '0';
       end if;
       carrypos := to_integer(cptmp);
       allvalue <= tmp2;
