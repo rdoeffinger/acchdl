@@ -16,26 +16,26 @@ architecture behaviour of test_accumulator is
   signal acc_res : addblock;
   signal testcycle : integer := 0;
 
-  constant NUMTESTS : integer := 5;
+  constant NUMTESTS : integer := 6;
   type ops_t is array (0 to NUMTESTS - 1) of operation;
   constant ops : ops_t := (
-    op_nop, op_add, op_add, op_add, op_readblock
+    op_nop, op_add, op_add, op_add, op_readblock, op_readfloat
   );
 
   type datas_t is array (0 to NUMTESTS - 1) of addblock;
   constant datas : datas_t := (
     (others => 'Z'), X"0123456789abcdef", X"19acdefffffff000", (others => '1'),
-    (others => 'Z')
+    (others => 'Z'), (others => 'Z')
   );
 
   type poss_t is array (0 to NUMTESTS - 1) of position;
   constant poss : poss_t := (
-    0, 1, 1, 1, 3
+    0, 1, 1, 1, 3, 0
   );
 
   type resets_t is array (0 to NUMTESTS - 1) of std_logic;
   constant resets : resets_t := (
-    '1', '0', '0', '0', '0'
+    '1', '0', '0', '0', '0', '0'
   );
 
 constant ACC_CLOCK_PERIOD : time := 10ns;
