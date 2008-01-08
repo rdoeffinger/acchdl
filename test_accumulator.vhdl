@@ -19,7 +19,7 @@ architecture behaviour of test_accumulator is
   constant NUMTESTS : integer := 5;
   type ops_t is array (0 to NUMTESTS - 1) of operation;
   constant ops : ops_t := (
-    op_nop, op_add, op_add, op_add, op_output
+    op_nop, op_add, op_add, op_add, op_readblock
   );
 
   type datas_t is array (0 to NUMTESTS - 1) of addblock;
@@ -30,7 +30,7 @@ architecture behaviour of test_accumulator is
 
   type poss_t is array (0 to NUMTESTS - 1) of position;
   constant poss : poss_t := (
-    0, 5, 5, 5, 7
+    0, 1, 1, 1, 3
   );
 
   type resets_t is array (0 to NUMTESTS - 1) of std_logic;
