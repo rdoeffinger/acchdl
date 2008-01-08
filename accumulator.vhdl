@@ -50,7 +50,7 @@ end accumulator;
 architecture behaviour of accumulator is
   type state_t is (st_ready, st_add1, st_add2, st_out_block,
                    st_in_block, st_out_status, st_in_status, st_fixcarry,
-                   st_out_float1);
+                   st_out_float1, st_out_float2);
 
   signal accu : accutype;
   signal allmask : flagtype;
@@ -69,8 +69,10 @@ begin
   process(clock,reset)
     variable replicate : subblock;
     variable curval : subblock;
+    variable tmp : addblock;
     variable carry : std_logic;
-    variable next_addpos : natural;
+    variable next_addpos : natural range 0 to NUMBLOCKS;
+    variable floatshift : natural range 0 to BLOCKSIZE-1;
 
     procedure findcarry(sign : in std_logic; pos : in position;
                         carrypos : out natural) is
@@ -189,7 +191,20 @@ begin
         fixcarry(sig_sign, curval);
         state <= st_ready;
       when st_out_float1 =>
-        out_buf(BLOCKSIZE-1 downto 0) <= curval;
+--        out_buf(BLOCKSIZE-1 downto 0) <= curval;
+        for floatshift in BLOCKSIZE-1 downto 0 loop
+          if curval(floatshift) /= allvalue(NUMBLOCKS) then
+            exit;
+          end if;
+        end loop;
+        addpos <= addpos - 1;
+        state <= st_out_float2;
+      when st_out_float2 =>
+        out_buf(31) <= allvalue(NUMBLOCKS);
+        out_buf(30 downto 23) <= std_logic_vector(to_unsigned(addpos * BLOCKSIZE + floatshift - BLOCKSIZE - 1 + 9, 8));
+        out_buf(22 downto 0) <= (others => '0');
+--        tmp := std_logic_vector(unsigned(std_logic_vector'(out_buf(BLOCKSIZE-1 downto 0) & curval(BLOCKSIZE-1 downto 0))) srl floatshift);
+--        out_buf(22 downto 0) <= tmp(31 downto 9);
         state <= st_ready;
       when st_ready =>
 -- copy inputs for use in next cycles
@@ -198,7 +213,12 @@ begin
         input <= data_in;
         case op is
         when op_nop => null;
-        when op_add => state <= st_add1;
+        when op_add =>
+          if sign = '1' then
+            -- we need two's complement representation
+            input <= addblock(unsigned(not data_in) + 1);
+          end if;
+          state <= st_add1;
         when op_readblock => state <= st_out_block;
         when op_writeblock => state <= st_in_block;
         when op_readflags => state <= st_out_status;
