@@ -161,11 +161,14 @@ constant CMD_OFFSET  : integer :=  0;
 constant CMD_LEN     : integer :=  6;
 constant TAG_OFFSET  : integer := 16;
 constant TAG_LEN     : integer :=  5;
+constant COUNT_OFFSET: integer := 22;
+constant COUNT_LEN   : integer :=  4;
 constant ADDR_OFFSET : integer := 26;
 constant ADDR_LEN    : integer := 62;
 
 alias posted_cmd_in_cmd       : std_logic_vector(CMD_LEN  - 1 downto 0) is posted_cmd_in(   CMD_OFFSET  + CMD_LEN  - 1 downto CMD_OFFSET);
 alias posted_cmd_in_tag       : std_logic_vector(TAG_LEN  - 1 downto 0) is posted_cmd_in(   TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
+alias posted_cmd_in_count     : std_logic_vector(COUNT_LEN- 1 downto 0) is posted_cmd_in( COUNT_OFFSET  + COUNT_LEN- 1 downto COUNT_OFFSET);
 alias posted_cmd_in_addr      : std_logic_vector(ADDR_LEN - 1 downto 0) is posted_cmd_in(   ADDR_OFFSET + ADDR_LEN - 1 downto ADDR_OFFSET);
 alias nonposted_cmd_in_cmd    : std_logic_vector(CMD_LEN  - 1 downto 0) is nonposted_cmd_in(CMD_OFFSET  + CMD_LEN  - 1 downto CMD_OFFSET);
 alias nonposted_cmd_in_tag    : std_logic_vector(TAG_LEN  - 1 downto 0) is nonposted_cmd_in(TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
@@ -297,6 +300,7 @@ begin
   variable buffered_posted_cmd_avail : std_logic;
   variable buffered_posted_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
   variable buffered_posted_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
+  variable buffered_posted_count : std_logic_vector(COUNT_LEN - 1 downto 0);
   variable buffered_posted_data_avail : std_logic;
   variable buffered_posted_data : std_logic_vector(63 downto 0);
   variable buffered_nonposted_cmd_avail : std_logic;
@@ -331,11 +335,14 @@ begin
          buffered_posted_cmd_avail = '0' then
         buffered_posted_cmd_avail := '1';
         buffered_posted_cmd := posted_cmd_in_cmd;
+        buffered_posted_count := posted_cmd_in_count;
         buffered_posted_addr := posted_cmd_in_addr;
       end if;
       if posted_data_empty = '0' and
          buffered_posted_data_avail = '0' then
-        posted_data_complete <= '1';
+        if unsigned(buffered_posted_count) < 2 then
+          posted_data_complete <= '1';
+        end if;
         buffered_posted_data_avail := '1';
         buffered_posted_data := posted_data_in;
       end if;
@@ -393,6 +400,10 @@ begin
              clock2 = '1' and
              ready(regnum) = '1' then
             buffered_posted_cmd_avail := '0';
+            if unsigned(buffered_posted_count) > 1 then
+              buffered_posted_count := std_logic_vector(unsigned(buffered_posted_count) - 2);
+            end if;
+            buffered_posted_data_avail := '0';
             if buffered_posted_addr(9) = '1' then
               data_in(regnum) <= buffered_posted_data;
               pos(regnum) <= to_integer(unsigned(buffered_posted_addr(8 downto 0))) - 256;
@@ -404,14 +415,13 @@ begin
             else
               tmp := X"0000000000"&"1"&buffered_posted_data(22 downto 0);
               if buffered_posted_data(30 downto 23) = X"00" then
-                tmp(24) := '0'; -- denormalized value
+                tmp(23) := '0'; -- denormalized value
               elsif buffered_posted_data(30 downto 23) = X"11" then
                 tmp := (others => '0'); -- ignore Inf and NaN for now
-              else
-                shift_cnt := to_integer(unsigned(buffered_posted_data(27 downto 23)));
-                tmp := addblock(unsigned(tmp) sll shift_cnt);
               end if;
               sign(regnum) <= buffered_posted_data(31) xor buffered_posted_addr(8);
+              shift_cnt := to_integer(unsigned(buffered_posted_data(27 downto 23)));
+              tmp := addblock(unsigned(tmp) sll shift_cnt);
               data_in(regnum) <= tmp;
               pos(regnum) <= to_integer(unsigned(buffered_posted_data(30 downto 28))) - 4;
               op(regnum) <= op_add;
@@ -419,10 +429,11 @@ begin
           end if;
         else
           buffered_posted_cmd_avail := '0';
+          if unsigned(buffered_posted_count) > 1 then
+            buffered_posted_count := std_logic_vector(unsigned(buffered_posted_count) - 2);
+          end if;
+          buffered_posted_data_avail := '0';
         end if;
-      end if;
-      if buffered_posted_cmd_avail = '0' then
-        buffered_posted_data_avail := '0';
       end if;
       if buffered_nonposted_cmd_avail = '1' then
         if buffered_nonposted_cmd(5 downto 4) = "01" then
