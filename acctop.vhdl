@@ -412,10 +412,6 @@ begin
                 tmp := addblock(unsigned(tmp) sll shift_cnt);
               end if;
               sign(regnum) <= buffered_posted_data(31) xor buffered_posted_addr(8);
-              if (buffered_posted_data(31) xor buffered_posted_addr(8)) = '1' then
-                -- we need two's complement representation
-                tmp := addblock(unsigned(not tmp) + 1);
-              end if;
               data_in(regnum) <= tmp;
               pos(regnum) <= to_integer(unsigned(buffered_posted_data(30 downto 28))) - 4;
               op(regnum) <= op_add;
