@@ -140,7 +140,8 @@ begin
 end process;
 
 execute : process(clock,reset)
-  variable tmp : unsigned(BLOCKSIZE downto 0);
+  variable addtmp : unsigned(BLOCKSIZE downto 0);
+  variable bigtmp : addblock;
   variable curval : subblock;
   variable floatshift : natural range 0 to BLOCKSIZE-1;
 begin
@@ -170,29 +171,32 @@ begin
       when st_add1 =>
         write_pos <= read_pos;
         write_pos <= read_pos;
-        tmp := "0"&unsigned(input(BLOCKSIZE-1 downto 0));
-        tmp := tmp + unsigned(curval);
-        carry(0) <= tmp(BLOCKSIZE);
-        write_block <= subblock(tmp(BLOCKSIZE-1 downto 0));
+        addtmp := "0"&unsigned(input(BLOCKSIZE-1 downto 0));
+        addtmp := addtmp + unsigned(curval);
+        carry(0) <= addtmp(BLOCKSIZE);
+        write_block <= subblock(addtmp(BLOCKSIZE-1 downto 0));
       when st_add2 =>
         write_pos <= read_pos;
-        tmp := "0"&unsigned(input(2*BLOCKSIZE-1 downto BLOCKSIZE));
-        tmp := tmp + unsigned(curval) + carry;
-        carry(0) <= tmp(BLOCKSIZE);
-        write_block <= subblock(tmp(BLOCKSIZE-1 downto 0));
+        addtmp := "0"&unsigned(input(2*BLOCKSIZE-1 downto BLOCKSIZE));
+        addtmp := addtmp + unsigned(curval) + carry;
+        carry(0) <= addtmp(BLOCKSIZE);
+        write_block <= subblock(addtmp(BLOCKSIZE-1 downto 0));
       when st_fixcarry =>
         write_pos <= read_pos;
         write_block <= subblock(unsigned(curval) + 1);
       when st_out_float1 =>
+        bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := curval;
         for floatshift in BLOCKSIZE-1 downto 0 loop
           if curval(floatshift) /= allvalue(NUMBLOCKS) then
             exit;
           end if;
         end loop;
       when st_out_float2 =>
+        bigtmp(BLOCKSIZE-1 downto 0) := curval;
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= std_logic_vector(to_unsigned(read_pos * BLOCKSIZE + floatshift - BLOCKSIZE - 1 + 9, 8));
-        out_buf(22 downto 0) <= (others => '0');
+        bigtmp := std_logic_vector(unsigned(bigtmp) srl floatshift);
+        out_buf(22 downto 0) <= bigtmp(31 downto 9);
       when others =>
         null;
     end case;
