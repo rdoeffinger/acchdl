@@ -124,6 +124,9 @@ begin
 	 if state = st_in_status and input(17) = '1' then
       allmask(NUMBLOCKS) <= not input(1);
     end if;
+    if state = st_in_status and input(18) = '1' and input(2) = '1' then
+      allmask <= (others => '1');
+    end if;
   end if;
 end process;
 
@@ -135,6 +138,9 @@ begin
     allvalue(write_pos) <= write_block(0);
     if state = st_in_status and input(16) = '1' then
       allvalue(NUMBLOCKS) <= input(0);
+    end if;
+    if state = st_in_status and input(18) = '1' and input(2) = '1' then
+      allvalue <= (others => '0');
     end if;
   end if;
 end process;
@@ -161,8 +167,13 @@ begin
         write_pos <= next_pos;
         write_block <= input(BLOCKSIZE-1 downto 0);
       when st_out_status =>
-        out_buf(31 downto 16) <= X"0003"; -- valid flags
+        out_buf(31 downto 16) <= X"0007"; -- valid flags
         out_buf(15 downto 2) <= (others => '0');
+        if (allvalue or not allmask) = X"000" then
+          out_buf(2) <= '1';
+        else
+          out_buf(2) <= '0';
+        end if;
         out_buf(1) <= not allmask(NUMBLOCKS);
         out_buf(0) <= allvalue(NUMBLOCKS);
       when st_in_status =>
@@ -226,11 +237,10 @@ begin
           when op_readfloat =>
 -- FIXME this is wrong here
             next_pos <= 0;
-            for i in NUMBLOCKS - 1 downto 0 loop
+            for i in 0 to NUMBLOCKS - 1 loop
               if allmask(i) = '0' or
                  allvalue(i) /= allvalue(NUMBLOCKS) then
                 next_pos <= i;
-                exit;
               end if;
             end loop;
           when others =>
