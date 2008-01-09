@@ -170,7 +170,6 @@ begin
         null;
       when st_add1 =>
         write_pos <= read_pos;
-        write_pos <= read_pos;
         addtmp := "0"&unsigned(input(BLOCKSIZE-1 downto 0));
         addtmp := addtmp + unsigned(curval);
         carry(0) <= addtmp(BLOCKSIZE);
