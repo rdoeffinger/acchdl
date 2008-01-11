@@ -12,7 +12,7 @@ package accumulator_types is
   subtype flagtype is std_logic_vector(NUMBLOCKS downto 0);
   subtype position is integer range -256 to 255;
   type operation is (op_nop, op_add, op_readblock, op_writeblock,
-                     op_readflags, op_writeflags, op_readfloat);
+                     op_readflags, op_writeflags, op_readfloat, op_floatadd);
   component accumulator is
     port (
       ready : out std_logic;
@@ -48,7 +48,7 @@ entity accumulator is
 end accumulator;
 
 architecture behaviour of accumulator is
-  type state_t is (st_ready, st_add0, st_add1, st_add2, st_fixcarry,
+  type state_t is (st_ready, st_in_float0, st_add0, st_add1, st_add2, st_fixcarry,
                    st_out_block0, st_out_block1,
                    st_in_block, st_out_status, st_in_status,
                    st_out_float0, st_out_float1, st_out_float2);
@@ -72,7 +72,8 @@ begin
   ready <= '0' when reset = '1' or
                     state = st_add0 or state = st_add1 or state = st_add2 or
                     state = st_out_block0 or
-                    state = st_out_float0 or state = st_out_float1
+                    state = st_out_float0 or state = st_out_float1 or
+                    state = st_in_float0
            else '1';
   data_out <= out_buf;
 
@@ -243,6 +244,8 @@ begin
                 next_pos <= i;
               end if;
             end loop;
+          when op_floatadd =>
+            next_pos <= to_integer(unsigned(input(30 downto 28))) - 4 + NUMBLOCKS / 2;
           when others =>
             next_pos <= 0;
         end case;
@@ -256,7 +259,7 @@ begin
     state <= st_ready;
   elsif rising_edge(clock) then
     case state is
-      when st_add0 =>
+      when st_add0 | st_in_float0 =>
         state <= st_add1;
       when st_add1 =>
         state <= st_add2;
@@ -284,27 +287,45 @@ begin
             state <= st_in_status;
           when op_readfloat =>
             state <= st_out_float0;
+          when op_floatadd =>
+            state <= st_in_float0;
         end case;
     end case;
   end if;
 end process;
 
 get_input : process(clock,reset)
+  variable shift_cnt : natural range 0 to BLOCKSIZE-1;
+  variable tmp : addblock;
 begin
   if reset = '1' then
     input <= (others => '0');
     sig_sign <= '0';
   elsif rising_edge(clock) then
     case state is
-      when st_add1 | st_add2 | st_out_float1 =>
+      when st_in_float0 | st_add0 | st_add1 | st_add2 | st_out_float0 | st_out_float1 | st_out_block0 =>
         null;
       when others =>
         if op = op_add and sign = '1' then
           input <= addblock(unsigned(not data_in) + 1);
+        elsif op = op_floatadd then
+          shift_cnt := to_integer(unsigned(data_in(27 downto 23)));
+          tmp := X"0000000000"&"1"&data_in(22 downto 0);
+          if data_in(30 downto 23) = X"00" then
+            tmp(23) := '0'; -- denormalized value
+          elsif data_in(30 downto 23) = X"11" then
+            tmp := (others => '0'); -- ignore Inf and NaN for now
+          end if;
+          tmp := addblock(unsigned(tmp) sll shift_cnt);
+          input <= tmp;
         else
           input <= data_in;
         end if;
-        sig_sign <= sign;
+        if op = op_floatadd then
+          sig_sign <= sign xor data_in(31);
+        else
+          sig_sign <= sign;
+        end if;
     end case;
   end if;
 end process;

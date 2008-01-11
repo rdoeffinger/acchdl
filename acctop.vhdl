@@ -309,8 +309,6 @@ begin
   variable buffered_nonposted_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
   variable buffered_nonposted_data_avail : std_logic;
   variable buffered_nonposted_data : std_logic_vector(63 downto 0);
-  variable shift_cnt : natural range 0 to BLOCKSIZE-1;
-  variable tmp : addblock;
   begin
     if reset_n = '0' then
       clock2 <= '0';
@@ -413,18 +411,9 @@ begin
                 op(regnum) <= op_writeblock;
               end if;
             else
-              tmp := X"0000000000"&"1"&buffered_posted_data(22 downto 0);
-              if buffered_posted_data(30 downto 23) = X"00" then
-                tmp(23) := '0'; -- denormalized value
-              elsif buffered_posted_data(30 downto 23) = X"11" then
-                tmp := (others => '0'); -- ignore Inf and NaN for now
-              end if;
-              sign(regnum) <= buffered_posted_data(31) xor buffered_posted_addr(8);
-              shift_cnt := to_integer(unsigned(buffered_posted_data(27 downto 23)));
-              tmp := addblock(unsigned(tmp) sll shift_cnt);
-              data_in(regnum) <= tmp;
-              pos(regnum) <= to_integer(unsigned(buffered_posted_data(30 downto 28))) - 4;
-              op(regnum) <= op_add;
+              sign(regnum) <= buffered_posted_addr(8);
+              data_in(regnum) <= buffered_posted_data;
+              op(regnum) <= op_floatadd;
             end if;
           end if;
         else
