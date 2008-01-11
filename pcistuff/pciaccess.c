@@ -94,9 +94,9 @@ int process_command(volatile uint8_t *mapped) {
   } else if (par1 && strcmp(buffer, "r32") == 0) {
     printf("%08"PRIx32"\n", mapped_32[addr]);
   } else if (par1 && strcmp(buffer, "rf") == 0) {
-    printf("%f\n", (double)mapped_float[addr]);
+    printf("%e\n", (double)mapped_float[addr]);
   } else if (par1 && strcmp(buffer, "rd") == 0) {
-    printf("%f\n", mapped_double[addr]);
+    printf("%e\n", mapped_double[addr]);
   } else if (par1 && par2 && strcmp(buffer, "w64") == 0) {
     mapped_64[addr] = vali;
   } else if (par1 && par2 && strcmp(buffer, "w32") == 0) {
