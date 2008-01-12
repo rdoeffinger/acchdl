@@ -68,6 +68,7 @@ architecture behaviour of accumulator is
   signal carry : unsigned(0 downto 0);
   attribute clock_signal : string;
   attribute clock_signal of clock : signal is "yes";
+  signal floatshift : natural range 0 to BLOCKSIZE-1;
 begin
   ready <= '0' when reset = '1' or
                     state = st_add0 or state = st_add1 or state = st_add2 or
@@ -150,7 +151,7 @@ execute : process(clock,reset)
   variable addtmp : unsigned(BLOCKSIZE downto 0);
   variable bigtmp : addblock;
   variable curval : subblock;
-  variable floatshift : natural range 0 to BLOCKSIZE-1;
+  variable i : natural range 1 to BLOCKSIZE-1;
 begin
   if reset = '1' then
     write_pos <= 0;
@@ -197,15 +198,16 @@ begin
         write_block <= subblock(unsigned(curval) + 1);
       when st_out_float1 =>
         bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := curval;
-        for floatshift in BLOCKSIZE-1 downto 0 loop
+        floatshift <= 0;
+        for i in 1 to BLOCKSIZE-1 loop
           if curval(floatshift) /= allvalue(NUMBLOCKS) then
-            exit;
+            floatshift <= i;
           end if;
         end loop;
       when st_out_float2 =>
         bigtmp(BLOCKSIZE-1 downto 0) := curval;
         out_buf(31) <= allvalue(NUMBLOCKS);
-        out_buf(30 downto 23) <= std_logic_vector(to_unsigned(read_pos * BLOCKSIZE + floatshift - BLOCKSIZE - 1 + 9, 8));
+        out_buf(30 downto 23) <= std_logic_vector(to_unsigned(read_pos * BLOCKSIZE + floatshift - BLOCKSIZE + 9, 8));
         bigtmp := std_logic_vector(unsigned(bigtmp) srl floatshift);
         out_buf(22 downto 0) <= bigtmp(31 downto 9);
       when others =>
