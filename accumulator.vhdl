@@ -247,7 +247,7 @@ begin
               end if;
             end loop;
           when op_floatadd =>
-            next_pos <= to_integer(unsigned(input(30 downto 28))) - 4 + NUMBLOCKS / 2;
+            next_pos <= to_integer(unsigned(input(30 downto 28))) + (NUMBLOCKS / 2 - 4);
           when others =>
             next_pos <= 0;
         end case;
