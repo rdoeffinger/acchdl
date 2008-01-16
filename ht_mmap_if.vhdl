@@ -69,9 +69,23 @@ signal accreset : std_logic;
 signal sign : std_logic_vector(NUMREGS-1 downto 0);
 type position_array_t is array(0 to NUMREGS-1) of position;
 signal pos : position_array_t;
-type state_t is (START, READ_WAIT, READ_WAIT2);
+type state_t is (START, READ_WAIT, READ_WAIT2, READ_WAIT3, READ_WAIT4);
 signal state : state_t;
 signal readreg : natural range 0 to NUMREGS - 1;
+signal cmd_stop : std_logic;
+signal new_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
+signal new_tag : std_logic_vector(TAG_LEN - 1 downto 0);
+signal new_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
+signal new_data : std_logic_vector(63 downto 0);
+signal last_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
+signal last_tag : std_logic_vector(TAG_LEN - 1 downto 0);
+signal last_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
+signal last_data : std_logic_vector(63 downto 0);
+signal cmd : std_logic_vector(CMD_LEN - 1 downto 0);
+signal tag : std_logic_vector(TAG_LEN - 1 downto 0);
+signal addr : std_logic_vector(ADDR_LEN - 1 downto 0);
+signal cmd_reg : integer range 0 to NUMREGS - 1;
+signal data : std_logic_vector(63 downto 0);
 
 begin
   regs : for I in 0 to NUMREGS-1 generate
@@ -89,25 +103,102 @@ begin
 
   accreset <= not reset_n;
   nonposted_data_complete <= '0';
+  response_cmd_out(7 downto 6) <= "00";
+  response_cmd_out(15 downto 13) <= "000";
+  response_cmd_out(92 downto 21) <= X"000000000000000000";
+  response_cmd_out_unitid <= UnitID;
   sign(0) <= '0';
 
-  process (clock, reset_n)
-  variable regnum : integer range 0 to NUMREGS-1;
+  cmd <= last_cmd when cmd_stop = '1' else new_cmd;
+  tag <= last_tag when cmd_stop = '1' else new_tag;
+  addr <= last_addr when cmd_stop = '1' else new_addr;
+  cmd_reg <= to_integer(unsigned(addr(10 + REGBITS downto 10)));
+  data <= last_data when cmd_stop = '1' else new_data;
+
+  move_last : process(clock,reset_n)
+  begin
+    if reset_n = '0' then
+      last_cmd <= (others => '0');
+      last_tag <= (others => '0');
+      last_addr <= (others => '0');
+      last_data <= (others => '0');
+    elsif rising_edge(clock) then
+      last_cmd <= new_cmd;
+      last_tag <= new_tag;
+      last_addr <= new_addr;
+      last_data <= new_data;
+    end if;
+  end process;
+
+  set_stop : process(clock,reset_n)
+  begin
+    if reset_n = '0' then
+	   cmd_stop <= '0';
+    elsif rising_edge(clock) then
+      cmd_stop <= not ready(cmd_reg);
+    end if;
+  end process;
+
+  set_simplestuff : process(clock,reset_n)
+  begin
+    if reset_n = '0' then
+      null;
+    elsif rising_edge(clock) then
+      if ready(cmd_reg) = '1' then
+        data_in(cmd_reg) <= data;
+        pos(cmd_reg) <= to_integer(unsigned(addr(8 downto 0))) - 256;
+        sign(cmd_reg) <= addr(8);
+      end if;
+    end if;
+  end process;
+
+  set_op : process(clock,reset_n)
+  begin
+    if reset_n = '0' then
+      for regnum in 0 to NUMREGS-1 loop
+        op(regnum) <= op_nop;
+      end loop;
+    elsif rising_edge(clock) then
+      for regnum in 0 to NUMREGS-1 loop
+        if ready(regnum) = '1' then
+          if regnum = cmd_reg then
+            if cmd(4 downto 2) = "011" then
+              op(regnum) <= op_floatadd;
+            elsif cmd(5 downto 4) = "01" then
+              op(regnum) <= op_readfloat;
+            else
+              op(regnum) <= op_nop;
+            end if;
+          else
+            op(regnum) <= op_nop;
+          end if;
+        end if;
+      end loop;
+    end if;
+  end process;
+
+  process(clock,reset_n)
   variable buffered_posted_cmd_avail : std_logic;
   variable buffered_posted_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
+  variable buffered_posted_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
   variable buffered_posted_data_avail : std_logic;
   variable buffered_posted_data : std_logic_vector(63 downto 0);
   variable buffered_nonposted_cmd_avail : std_logic;
   variable buffered_nonposted_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
   variable buffered_nonposted_tag : std_logic_vector(TAG_LEN - 1 downto 0);
+  variable buffered_nonposted_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
   variable buffered_nonposted_data_avail : std_logic;
   variable buffered_nonposted_data : std_logic_vector(63 downto 0);
+  function needs_data(cmd : in std_logic_vector(CMD_LEN - 1 downto 0)) return boolean is
+    variable res : boolean;
+  begin
+    res := cmd(4 downto 3) = "01"; -- write request
+	 res := res or cmd = "110000"; -- read response
+	 res := res or cmd = "111101"; -- atomic read-modify-write
+	 return res;
+  end;
   begin
     if reset_n = '0' then
-      state <= START;
-      for regnum in 0 to NUMREGS-1 loop
-        op(regnum) <= op_nop;
-      end loop;
       posted_data_complete <= '0';
       response_cmd_put <= '0';
       response_data_put <= '0';
@@ -119,100 +210,60 @@ begin
       buffered_posted_data_avail := '0';
       buffered_nonposted_cmd_avail := '0';
       buffered_nonposted_data_avail := '0';
+      new_cmd <= (others => '0');
+      new_tag <= (others => '0');
+      new_addr <= (others => '0');
+      new_data <= (others => '0');
     elsif rising_edge(clock) then
-      posted_data_complete <= '0';
-      if posted_cmd_empty = '0' and
-         buffered_posted_cmd_avail = '0' then
-        buffered_posted_cmd_avail := '1';
+      if buffered_posted_cmd_avail = '0' then
         buffered_posted_cmd := posted_cmd_in_cmd;
+        buffered_posted_addr := posted_cmd_in_addr;
       end if;
-      if posted_data_empty = '0' and
-         buffered_posted_data_avail = '0' then
-        posted_data_complete <= '1';
-        buffered_posted_data_avail := '1';
+      buffered_posted_cmd_avail := buffered_posted_cmd_avail or not posted_cmd_empty;
+
+      if buffered_posted_data_avail = '0' then
         buffered_posted_data := posted_data_in;
       end if;
-      if nonposted_cmd_empty = '0' and
-         buffered_nonposted_cmd_avail = '0' then
-        buffered_nonposted_cmd_avail := '1';
+      posted_data_complete <= not buffered_posted_data_avail and not posted_data_empty;
+      buffered_posted_data_avail := buffered_posted_data_avail or not posted_data_empty;
+
+      if buffered_nonposted_cmd_avail = '0' then
         buffered_nonposted_cmd := nonposted_cmd_in_cmd;
         buffered_nonposted_tag := nonposted_cmd_in_tag;
+        buffered_nonposted_addr := nonposted_cmd_in_addr;
       end if;
-      if nonposted_data_empty = '0' and
-         buffered_nonposted_data_avail = '0' then
-        buffered_nonposted_data_avail := '1';
+      buffered_nonposted_cmd_avail := buffered_nonposted_cmd_avail or not nonposted_cmd_empty;
+
+      if buffered_nonposted_data_avail = '0' then
         buffered_nonposted_data := posted_data_in;
       end if;
+      buffered_nonposted_data_avail := buffered_nonposted_data_avail or not nonposted_data_empty;
 
-      response_cmd_put <= '0';
-      response_data_put <= '0';
-
-      if ready(readreg) = '1' then
-        if state = READ_WAIT then
-          state <= READ_WAIT2;
-        elsif state = READ_WAIT2 and
-              response_cmd_full = '0' and
-              response_data_full = '0' then
-          buffered_nonposted_cmd_avail := '0';
-          response_cmd_out <= (others => '0');
-          response_cmd_out_cmd <= "110000"; -- read response
-          response_cmd_out_unitid <= UnitID;
-          response_cmd_out_tag <= buffered_nonposted_tag;
-          response_cmd_out_format <= "011"; -- 32 bit, data attached
-          response_data_out <= data_out(readreg);
-          response_cmd_put <= '1';
-          response_data_put <= '1';
-          op(readreg) <= op_nop;
-          state <= START;
-        end if;
-      end if;
-      for regnum in 0 to NUMREGS-1 loop
-        if ready(regnum) = '1' and
-           (state = START or regnum /= readreg) then
-          op(regnum) <= op_nop;
-        end if;
-      end loop;
-
-      if buffered_posted_cmd_avail = '1' then
-        if buffered_posted_cmd(5 downto 2) = "1011" then
-          regnum := 0;
-          -- handle only posted doubleword writes
-          if buffered_posted_data_avail = '1' and
-             (state = START or regnum /= readreg) and
-             ready(regnum) = '1' then
-            buffered_posted_cmd_avail := '0';
-            buffered_posted_data_avail := '0';
-            data_in(regnum) <= buffered_posted_data;
-            op(regnum) <= op_floatadd;
-          end if;
-        else
+      if cmd_stop = '0' then
+        if buffered_posted_cmd_avail = '1' and
+          (buffered_posted_data_avail = '1' or not needs_data(buffered_posted_cmd)) then
           buffered_posted_cmd_avail := '0';
           buffered_posted_data_avail := '0';
-        end if;
-      end if;
-      if buffered_nonposted_cmd_avail = '1' then
-        if buffered_nonposted_cmd(5 downto 4) = "01" then
-          regnum := 0;
-          -- check for read request
-          if state = START and
-             ready(regnum) = '1' then
-            op(regnum) <= op_readfloat;
-            state <= READ_WAIT;
-            readreg <= regnum;
-          end if;
+          new_cmd <= buffered_posted_cmd;
+          new_tag <= (others => '0');
+          new_addr <= buffered_posted_addr;
+          new_data <= buffered_posted_data;
+        elsif buffered_nonposted_cmd_avail = '1' and
+             (buffered_nonposted_data_avail = '1' or not needs_data(buffered_nonposted_cmd)) then
+          buffered_nonposted_cmd_avail := '0';
+          buffered_nonposted_data_avail := '0';
+          new_cmd <= buffered_nonposted_cmd;
+          new_tag <= buffered_nonposted_tag;
+          new_addr <= buffered_nonposted_addr;
+          new_data <= buffered_nonposted_data;
         else
-          if state /= READ_WAIT2 and response_cmd_full = '0' then
-            buffered_nonposted_cmd_avail := '0';
-            response_cmd_out <= (others => '0');
-            response_cmd_out_cmd <= "110011"; -- target done
-            response_cmd_out_unitid <= UnitID;
-            response_cmd_out_tag <= buffered_nonposted_tag;
-            response_cmd_out_format <= "010"; -- 32 bit, no data attached
-            response_cmd_put <= '1';
-          end if;
+          new_cmd <= (others => '0');
+          new_tag <= (others => '0');
+          new_addr <= (others => '0');
+          new_data <= (others => '0');
         end if;
       end if;
-      buffered_nonposted_data_avail := '0';
+
       posted_cmd_get <= not buffered_posted_cmd_avail;
       posted_data_get <= not buffered_posted_data_avail;
       nonposted_cmd_get <= not buffered_nonposted_cmd_avail;
