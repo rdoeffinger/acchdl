@@ -107,7 +107,6 @@ begin
   response_cmd_out(15 downto 13) <= "000";
   response_cmd_out(92 downto 21) <= X"000000000000000000";
   response_cmd_out_unitid <= UnitID;
-  sign(0) <= '0';
 
   cmd <= last_cmd when cmd_stop = '1' else new_cmd;
   tag <= last_tag when cmd_stop = '1' else new_tag;
