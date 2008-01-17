@@ -110,7 +110,6 @@ begin
   response_cmd_out(15 downto 13) <= "000";
   response_cmd_out(92 downto 21) <= X"000000000000000000";
   response_cmd_out_unitid <= UnitID;
-  response_cmd_out_tag <= tag;
 
   cmd <= last_cmd when cmd_stop = '1' else new_cmd;
   cmd_needs_reply <= last_cmd_needs_reply when cmd_stop = '1' else new_cmd_needs_reply;
@@ -125,21 +124,21 @@ begin
       response_cmd_put <= '0';
       response_data_put <= '0';
     elsif rising_edge(clock) then
-      if state = READ_WAIT3 then
-        response_data_out <= data_out(read_reg);
-        response_cmd_put <= '0';
-        response_data_put <= '0';
-      elsif state = READ_WAIT4 and response_cmd_full = '0' and response_data_full = '0' then
-        response_cmd_put <= '1';
+      if state = START then
         if cmd(5 downto 4) = "01" then
           response_cmd_out_cmd <= "110000"; -- read response
           response_cmd_out_format <= "011"; -- 32 bit, data attached
-          response_data_put <= '1';
         else
           response_cmd_out_cmd <= "110011"; -- target done
           response_cmd_out_format <= "010"; -- 32 bit, no data attached
-          response_data_put <= '0';
         end if;
+        response_cmd_out_tag <= tag;
+      elsif state = READ_WAIT3 then
+        response_data_out <= data_out(read_reg);
+      end if;
+      if state = READ_WAIT4 and response_cmd_full = '0' and response_data_full = '0' then
+        response_cmd_put <= '1';
+        response_data_put <= response_cmd_out_format(0);
       else
         response_cmd_put <= '0';
         response_data_put <= '0';
