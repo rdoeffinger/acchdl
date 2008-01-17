@@ -71,17 +71,20 @@ type position_array_t is array(0 to NUMREGS-1) of position;
 signal pos : position_array_t;
 type state_t is (START, READ_WAIT, READ_WAIT2, READ_WAIT3, READ_WAIT4);
 signal state : state_t;
-signal readreg : natural range 0 to NUMREGS - 1;
+signal read_reg : natural range 0 to NUMREGS - 1;
 signal cmd_stop : std_logic;
 signal new_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
+signal new_cmd_needs_reply : std_logic;
 signal new_tag : std_logic_vector(TAG_LEN - 1 downto 0);
 signal new_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
 signal new_data : std_logic_vector(63 downto 0);
 signal last_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
+signal last_cmd_needs_reply : std_logic;
 signal last_tag : std_logic_vector(TAG_LEN - 1 downto 0);
 signal last_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
 signal last_data : std_logic_vector(63 downto 0);
 signal cmd : std_logic_vector(CMD_LEN - 1 downto 0);
+signal cmd_needs_reply : std_logic;
 signal tag : std_logic_vector(TAG_LEN - 1 downto 0);
 signal addr : std_logic_vector(ADDR_LEN - 1 downto 0);
 signal cmd_reg : integer range 0 to NUMREGS - 1;
@@ -109,20 +112,82 @@ begin
   response_cmd_out_unitid <= UnitID;
 
   cmd <= last_cmd when cmd_stop = '1' else new_cmd;
+  cmd_needs_reply <= last_cmd_needs_reply when cmd_stop = '1' else new_cmd_needs_reply;
   tag <= last_tag when cmd_stop = '1' else new_tag;
   addr <= last_addr when cmd_stop = '1' else new_addr;
   cmd_reg <= to_integer(unsigned(addr(10 + REGBITS downto 10)));
   data <= last_data when cmd_stop = '1' else new_data;
 
+  handle_reply : process(clock,reset_n)
+  begin
+    if reset_n = '0' then
+      response_cmd_put <= '0';
+      response_data_put <= '0';
+    elsif rising_edge(clock) then
+      if state = READ_WAIT3 then
+        response_data_out <= data_out(read_reg);
+        response_cmd_put <= '0';
+        response_data_put <= '0';
+      elsif state = READ_WAIT4 and response_cmd_full = '0' and response_data_full = '0' then
+        response_cmd_out_tag <= tag;
+        response_cmd_put <= '1';
+        if cmd(5 downto 4) = "01" then
+          response_cmd_out_cmd <= "110000"; -- read response
+          response_cmd_out_format <= "011"; -- 32 bit, data attached
+          response_data_put <= '1';
+        else
+          response_cmd_out_cmd <= "110011"; -- target done
+          response_cmd_out_format <= "010"; -- 32 bit, no data attached
+          response_data_put <= '0';
+        end if;
+      else
+        response_cmd_put <= '0';
+        response_data_put <= '0';
+      end if;
+    end if;
+  end process;
+
+  set_state : process(clock,reset_n)
+  begin
+    if reset_n = '0' then
+      state <= START;
+    elsif rising_edge(clock) then
+      if state = START and cmd_needs_reply = '1' and ready(cmd_reg) = '1' then
+        state <= READ_WAIT;
+      elsif state = READ_WAIT and ready(read_reg) = '1' then
+        state <= READ_WAIT2;
+      elsif state = READ_WAIT2 and ready(read_reg) = '1' then
+        state <= READ_WAIT3;
+      elsif state = READ_WAIT3 then
+        state <= READ_WAIT4;
+      elsif state = READ_WAIT4 and response_cmd_full = '0' and response_data_full = '0' then
+        state <= START;
+      end if;
+    end if;
+  end process;
+
+  set_read_reg : process(clock,reset_n)
+  begin
+    if reset_n = '0' then
+      read_reg <= 0;
+    elsif rising_edge(clock) then
+      if state = START and cmd(5 downto 4) = "01" and ready(cmd_reg) = '1' then
+        read_reg <= cmd_reg;
+      end if;
+    end if;
+  end process;
+
   move_last : process(clock,reset_n)
   begin
     if reset_n = '0' then
       last_cmd <= (others => '0');
+      last_cmd_needs_reply <= '0';
       last_tag <= (others => '0');
       last_addr <= (others => '0');
       last_data <= (others => '0');
     elsif rising_edge(clock) then
       last_cmd <= new_cmd;
+      last_cmd_needs_reply <= new_cmd_needs_reply;
       last_tag <= new_tag;
       last_addr <= new_addr;
       last_data <= new_data;
@@ -134,7 +199,11 @@ begin
     if reset_n = '0' then
 	   cmd_stop <= '0';
     elsif rising_edge(clock) then
-      cmd_stop <= not ready(cmd_reg);
+      if state = START then
+        cmd_stop <= not ready(cmd_reg);
+      else
+        cmd_stop <= '1';
+      end if;
     end if;
   end process;
 
@@ -160,7 +229,7 @@ begin
     elsif rising_edge(clock) then
       for regnum in 0 to NUMREGS-1 loop
         if ready(regnum) = '1' then
-          if regnum = cmd_reg then
+          if regnum = cmd_reg and state = START then
             if cmd(4 downto 2) = "011" then
               op(regnum) <= op_floatadd;
             elsif cmd(5 downto 4) = "01" then
@@ -199,8 +268,6 @@ begin
   begin
     if reset_n = '0' then
       posted_data_complete <= '0';
-      response_cmd_put <= '0';
-      response_data_put <= '0';
       posted_cmd_get <= '1';
       posted_data_get <= '1';
       nonposted_cmd_get <= '1';
@@ -210,6 +277,7 @@ begin
       buffered_nonposted_cmd_avail := '0';
       buffered_nonposted_data_avail := '0';
       new_cmd <= (others => '0');
+      new_cmd_needs_reply <= '0';
       new_tag <= (others => '0');
       new_addr <= (others => '0');
       new_data <= (others => '0');
@@ -244,6 +312,7 @@ begin
           buffered_posted_cmd_avail := '0';
           buffered_posted_data_avail := '0';
           new_cmd <= buffered_posted_cmd;
+          new_cmd_needs_reply <= '0';
           new_tag <= (others => '0');
           new_addr <= buffered_posted_addr;
           new_data <= buffered_posted_data;
@@ -252,11 +321,13 @@ begin
           buffered_nonposted_cmd_avail := '0';
           buffered_nonposted_data_avail := '0';
           new_cmd <= buffered_nonposted_cmd;
+          new_cmd_needs_reply <= '1';
           new_tag <= buffered_nonposted_tag;
           new_addr <= buffered_nonposted_addr;
           new_data <= buffered_nonposted_data;
         else
           new_cmd <= (others => '0');
+          new_cmd_needs_reply <= '0';
           new_tag <= (others => '0');
           new_addr <= (others => '0');
           new_data <= (others => '0');
