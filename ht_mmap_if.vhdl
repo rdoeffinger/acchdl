@@ -57,7 +57,7 @@ alias response_cmd_out_unitid : std_logic_vector(5        - 1 downto 0) is respo
 alias response_cmd_out_tag    : std_logic_vector(TAG_LEN  - 1 downto 0) is response_cmd_out(TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
 alias response_cmd_out_format : std_logic_vector(3        - 1 downto 0) is response_cmd_out(95 downto 93);
 
-constant REGBITS : integer := 0;
+constant REGBITS : integer := 1;
 constant NUMREGS : integer := 2**REGBITS;
 type data_array_t is array(0 to NUMREGS-1) of addblock;
 signal data_in : data_array_t;
@@ -110,6 +110,7 @@ begin
   response_cmd_out(15 downto 13) <= "000";
   response_cmd_out(92 downto 21) <= X"000000000000000000";
   response_cmd_out_unitid <= UnitID;
+  response_cmd_out_tag <= tag;
 
   cmd <= last_cmd when cmd_stop = '1' else new_cmd;
   cmd_needs_reply <= last_cmd_needs_reply when cmd_stop = '1' else new_cmd_needs_reply;
@@ -129,7 +130,6 @@ begin
         response_cmd_put <= '0';
         response_data_put <= '0';
       elsif state = READ_WAIT4 and response_cmd_full = '0' and response_data_full = '0' then
-        response_cmd_out_tag <= tag;
         response_cmd_put <= '1';
         if cmd(5 downto 4) = "01" then
           response_cmd_out_cmd <= "110000"; -- read response
