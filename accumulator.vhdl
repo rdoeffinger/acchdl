@@ -76,6 +76,7 @@ begin
                     state = st_out_float0 or state = st_out_float1 or
                     state = st_in_float0
            else '1';
+  out_buf(2*BLOCKSIZE-1 downto BLOCKSIZE) <= (others => '0');
   data_out <= out_buf;
 
 read : process(clock,reset)
@@ -239,8 +240,8 @@ begin
             next_pos <= pos + NUMBLOCKS / 2;
           when op_readfloat =>
 -- FIXME this is wrong here
-            next_pos <= 0;
-            for i in 0 to NUMBLOCKS - 1 loop
+            next_pos <= 1;
+            for i in 1 to NUMBLOCKS - 1 loop
               if allmask(i) = '0' or
                  allvalue(i) /= allvalue(NUMBLOCKS) then
                 next_pos <= i;
