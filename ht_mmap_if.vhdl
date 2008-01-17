@@ -302,7 +302,7 @@ begin
       buffered_nonposted_cmd_avail := buffered_nonposted_cmd_avail or not nonposted_cmd_empty;
 
       if buffered_nonposted_data_avail = '0' then
-        buffered_nonposted_data := posted_data_in;
+        buffered_nonposted_data := nonposted_data_in;
       end if;
       buffered_nonposted_data_avail := buffered_nonposted_data_avail or not nonposted_data_empty;
 
