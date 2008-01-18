@@ -6,13 +6,20 @@ package accumulator_types is
   constant BLOCKSIZE : integer := 32;
   constant BLOCKBITS : integer := 4;
   constant NUMBLOCKS : integer := 11;
+  subtype operation is std_logic_vector(2 downto 0);
+  subtype position_t is std_logic_vector(8 downto 0);
+  constant op_nop : operation := "000";
+  constant op_add : operation := "001";
+  constant op_readblock : operation := "010";
+  constant op_writeblock : operation := "011";
+  constant op_readflags : operation := "100";
+  constant op_writeflags : operation := "101";
+  constant op_readfloat : operation := "110";
+  constant op_floatadd : operation := "111";
   subtype addblock is std_logic_vector(2*BLOCKSIZE-1 downto 0);
   subtype subblock is std_logic_vector(BLOCKSIZE-1 downto 0);
   type accutype is array (NUMBLOCKS-1 downto 0) of subblock;
   subtype flagtype is std_logic_vector(NUMBLOCKS downto 0);
-  subtype position is integer range -256 to 255;
-  type operation is (op_nop, op_add, op_readblock, op_writeblock,
-                     op_readflags, op_writeflags, op_readfloat, op_floatadd);
   component accumulator is
     port (
       ready : out std_logic;
@@ -21,7 +28,7 @@ package accumulator_types is
       sign : in std_logic;
       data_in : in addblock;
       data_out : out subblock;
-      pos : in position;
+      pos : in position_t;
       op : in operation
     );
   end component;
@@ -42,7 +49,7 @@ entity accumulator is
     sign : in std_logic;
     data_in : in addblock;
     data_out : out subblock;
-    pos : in position;
+    pos : in position_t;
     op : in operation
   );
 end accumulator;
@@ -256,7 +263,7 @@ begin
       when others =>
         case op is
           when op_add | op_readblock | op_writeblock =>
-            next_pos <= pos + NUMBLOCKS / 2;
+            next_pos <= to_integer(signed(pos)) + NUMBLOCKS / 2;
           when op_readfloat =>
 -- FIXME this is wrong here
             next_pos <= 1;
@@ -303,8 +310,6 @@ begin
         state <= st_out_block1;
       when others =>
         case op is
-          when op_nop =>
-            state <= st_ready;
           when op_add =>
             state <= st_add0;
           when op_readblock =>
@@ -319,6 +324,8 @@ begin
             state <= st_out_float0;
           when op_floatadd =>
             state <= st_in_float0;
+          when others =>
+            state <= st_ready;
         end case;
     end case;
   end if;

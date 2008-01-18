@@ -11,7 +11,7 @@ architecture behaviour of test_accumulator is
   signal acc_clock : std_logic := '0';
   signal acc_op : operation;
   signal acc_value : addblock;
-  signal acc_pos : position;
+  signal acc_pos : position_t;
   signal acc_sign : std_logic;
   signal acc_res : subblock;
   signal testcycle : integer := 0;
@@ -28,9 +28,13 @@ architecture behaviour of test_accumulator is
     (others => 'Z'), (others => 'Z')
   );
 
-  type poss_t is array (0 to NUMTESTS - 1) of position;
+  constant pos0 : position_t := "000000000";
+  constant pos1 : position_t := "0"&X"01";
+  constant pos3 : position_t := "0"&X"03";
+
+  type poss_t is array (0 to NUMTESTS - 1) of position_t;
   constant poss : poss_t := (
-    0, 1, 1, 1, 3, 0
+    pos0, pos1, pos1, pos1, pos3, pos0
   );
 
   type resets_t is array (0 to NUMTESTS - 1) of std_logic;

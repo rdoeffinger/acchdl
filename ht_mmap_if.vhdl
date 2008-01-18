@@ -61,13 +61,14 @@ constant REGBITS : integer := 1;
 constant NUMREGS : integer := 2**REGBITS;
 type data_array_t is array(0 to NUMREGS-1) of addblock;
 signal data_in : data_array_t;
-signal data_out : data_array_t;
+type short_data_array_t is array(0 to NUMREGS-1) of subblock;
+signal data_out : short_data_array_t;
 signal ready : std_logic_vector(NUMREGS-1 downto 0);
 type operation_array_t is array(0 to NUMREGS-1) of operation;
 signal op : operation_array_t;
 signal accreset : std_logic;
 signal sign : std_logic_vector(NUMREGS-1 downto 0);
-type position_array_t is array(0 to NUMREGS-1) of position;
+type position_array_t is array(0 to NUMREGS-1) of position_t;
 signal pos : position_array_t;
 type state_t is (START, READ_WAIT, READ_WAIT2, READ_WAIT3, READ_WAIT4);
 signal state : state_t;
@@ -213,7 +214,7 @@ begin
     elsif rising_edge(clock) then
       if ready(cmd_reg) = '1' then
         data_in(cmd_reg) <= data;
-        pos(cmd_reg) <= to_integer(unsigned(addr(8 downto 0))) - 256;
+        pos(cmd_reg) <= not addr(8) & addr(7 downto 0);
         sign(cmd_reg) <= addr(8);
       end if;
     end if;
