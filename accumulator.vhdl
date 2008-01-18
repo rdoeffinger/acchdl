@@ -155,7 +155,16 @@ execute : process(clock,reset)
   variable addtmp : unsigned(BLOCKSIZE downto 0);
   variable bigtmp : addblock;
   variable curval : subblock;
-  variable i : natural range 1 to BLOCKSIZE-1;
+  function maxbit(v: subblock) return integer is
+    variable i : natural range 1 to BLOCKSIZE-1;
+  begin
+    for i in BLOCKSIZE - 1 downto 1 loop
+      if v(i) = '1' then
+        return i;
+      end if;
+    end loop;
+    return 0;
+  end;
 begin
   if reset = '1' then
     write_pos <= 0;
@@ -201,73 +210,15 @@ begin
         write_pos <= read_pos;
         write_block <= subblock(unsigned(curval) + 1);
       when st_out_float1 =>
-        bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := curval;
-        if curval(31) /= allvalue(NUMBLOCKS) then
-          floatshift <= 31;
-        elsif curval(30) /= allvalue(NUMBLOCKS) then
-          floatshift <= 30;
-        elsif curval(29) /= allvalue(NUMBLOCKS) then
-          floatshift <= 29;
-        elsif curval(28) /= allvalue(NUMBLOCKS) then
-          floatshift <= 28;
-        elsif curval(27) /= allvalue(NUMBLOCKS) then
-          floatshift <= 27;
-        elsif curval(26) /= allvalue(NUMBLOCKS) then
-          floatshift <= 26;
-        elsif curval(25) /= allvalue(NUMBLOCKS) then
-          floatshift <= 25;
-        elsif curval(24) /= allvalue(NUMBLOCKS) then
-          floatshift <= 24;
-        elsif curval(23) /= allvalue(NUMBLOCKS) then
-          floatshift <= 23;
-        elsif curval(22) /= allvalue(NUMBLOCKS) then
-          floatshift <= 22;
-        elsif curval(21) /= allvalue(NUMBLOCKS) then
-          floatshift <= 21;
-        elsif curval(20) /= allvalue(NUMBLOCKS) then
-          floatshift <= 20;
-        elsif curval(19) /= allvalue(NUMBLOCKS) then
-          floatshift <= 19;
-        elsif curval(18) /= allvalue(NUMBLOCKS) then
-          floatshift <= 18;
-        elsif curval(17) /= allvalue(NUMBLOCKS) then
-          floatshift <= 17;
-        elsif curval(16) /= allvalue(NUMBLOCKS) then
-          floatshift <= 16;
-        elsif curval(15) /= allvalue(NUMBLOCKS) then
-          floatshift <= 15;
-        elsif curval(14) /= allvalue(NUMBLOCKS) then
-          floatshift <= 14;
-        elsif curval(13) /= allvalue(NUMBLOCKS) then
-          floatshift <= 13;
-        elsif curval(12) /= allvalue(NUMBLOCKS) then
-          floatshift <= 12;
-        elsif curval(11) /= allvalue(NUMBLOCKS) then
-          floatshift <= 11;
-        elsif curval(10) /= allvalue(NUMBLOCKS) then
-          floatshift <= 10;
-        elsif curval(9) /= allvalue(NUMBLOCKS) then
-          floatshift <= 9;
-        elsif curval(8) /= allvalue(NUMBLOCKS) then
-          floatshift <= 8;
-        elsif curval(7) /= allvalue(NUMBLOCKS) then
-          floatshift <= 7;
-        elsif curval(6) /= allvalue(NUMBLOCKS) then
-          floatshift <= 6;
-        elsif curval(5) /= allvalue(NUMBLOCKS) then
-          floatshift <= 5;
-        elsif curval(4) /= allvalue(NUMBLOCKS) then
-          floatshift <= 4;
-        elsif curval(3) /= allvalue(NUMBLOCKS) then
-          floatshift <= 3;
-        elsif curval(2) /= allvalue(NUMBLOCKS) then
-          floatshift <= 2;
-        elsif curval(1) /= allvalue(NUMBLOCKS) then
-          floatshift <= 1;
-        else
-          floatshift <= 0;
+        if allvalue(NUMBLOCKS) = '1' then
+          curval := not curval;
         end if;
+        bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := curval;
+        floatshift <= maxbit(curval(BLOCKSIZE-1 downto BLOCKSIZE/2)&X"0000");
       when st_out_float2 =>
+        if floatshift = 0 then
+          floatshift <= maxbit(X"0000"&bigtmp(BLOCKSIZE + BLOCKSIZE/2 - 1 downto BLOCKSIZE));
+        end if;
         bigtmp(BLOCKSIZE-1 downto 0) := curval;
       when st_out_float_normal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
