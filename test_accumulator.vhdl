@@ -13,7 +13,7 @@ architecture behaviour of test_accumulator is
   signal acc_value : addblock;
   signal acc_pos : position;
   signal acc_sign : std_logic;
-  signal acc_res : addblock;
+  signal acc_res : subblock;
   signal testcycle : integer := 0;
 
   constant NUMTESTS : integer := 6;

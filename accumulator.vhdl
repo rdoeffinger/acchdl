@@ -20,7 +20,7 @@ package accumulator_types is
       clock : in std_logic;
       sign : in std_logic;
       data_in : in addblock;
-      data_out : out addblock;
+      data_out : out subblock;
       pos : in position;
       op : in operation
     );
@@ -41,7 +41,7 @@ entity accumulator is
     clock : in std_logic;
     sign : in std_logic;
     data_in : in addblock;
-    data_out : out addblock;
+    data_out : out subblock;
     pos : in position;
     op : in operation
   );
@@ -65,7 +65,7 @@ architecture behaviour of accumulator is
   signal read_block : subblock;
   signal write_block : subblock;
   signal state : state_t;
-  signal out_buf : addblock;
+  signal out_buf : subblock;
   signal carry : unsigned(0 downto 0);
   attribute clock_signal : string;
   attribute clock_signal of clock : signal is "yes";
@@ -79,7 +79,6 @@ begin
                     state = st_out_float0 or state = st_out_float1 or state = st_out_float2 or
                     state = st_in_float0
            else '1';
-  out_buf(2*BLOCKSIZE-1 downto BLOCKSIZE) <= (others => '0');
   data_out <= out_buf;
 
 read : process(clock,reset)
@@ -177,7 +176,7 @@ begin
     end if;
     case state is
       when st_out_block1 =>
-        out_buf(BLOCKSIZE-1 downto 0) <= curval;
+        out_buf <= curval;
       when st_in_block =>
         write_pos <= next_pos;
         write_block <= input(BLOCKSIZE-1 downto 0);

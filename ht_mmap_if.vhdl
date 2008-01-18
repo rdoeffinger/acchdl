@@ -134,7 +134,7 @@ begin
         end if;
         response_cmd_out_tag <= tag;
       elsif state = READ_WAIT3 then
-        response_data_out <= data_out(read_reg);
+        response_data_out <= X"00000000"&data_out(read_reg);
       end if;
       if state = READ_WAIT4 and response_cmd_full = '0' and response_data_full = '0' then
         response_cmd_put <= '1';
