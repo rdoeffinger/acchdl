@@ -93,17 +93,18 @@ begin
   if reset = '1' then
     allmask <= (others => '1');
   elsif rising_edge(clock) then
-    replicate := (others => write_block(0));
-    if write_block = replicate then
-      allmask(write_pos) <= '1';
-    else
-      allmask(write_pos) <= '0';
-    end if;
-	 if state = st_in_status and input(17) = '1' then
+    if state = st_in_status and input(17) = '1' then
       allmask(NUMBLOCKS) <= not input(1);
     end if;
     if state = st_in_status and input(18) = '1' and input(2) = '1' then
       allmask <= (others => '1');
+    else
+      replicate := (others => write_block(0));
+      if write_block = replicate then
+        allmask(write_pos) <= '1';
+      else
+        allmask(write_pos) <= '0';
+      end if;
     end if;
   end if;
 end process;
@@ -113,12 +114,13 @@ begin
   if reset = '1' then
     allvalue <= (others => '0');
   elsif rising_edge(clock) then
-    allvalue(write_pos) <= write_block(0);
     if state = st_in_status and input(16) = '1' then
       allvalue(NUMBLOCKS) <= input(0);
     end if;
     if state = st_in_status and input(18) = '1' and input(2) = '1' then
       allvalue <= (others => '0');
+    else
+      allvalue(write_pos) <= write_block(0);
     end if;
   end if;
 end process;
