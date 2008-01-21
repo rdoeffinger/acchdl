@@ -246,7 +246,7 @@ begin
           when op_add | op_readblock | op_writeblock =>
             next_pos <= to_integer(signed(pos)) + NUMBLOCKS / 2;
           when op_floatadd =>
-            next_pos <= to_integer(signed((not input(30))&input(29 downto 28))) + NUMBLOCKS / 2;
+            next_pos <= to_integer(unsigned(data_in(30 downto 28))) + (NUMBLOCKS / 2 - 4);
           when others =>
             next_pos <= 0;
         end case;
