@@ -43,6 +43,7 @@ architecture behaviour of accumulator is
   attribute clock_signal of clock : signal is "yes";
   signal floatshift : natural range 0 to BLOCKSIZE-1;
   signal exp : integer;
+  signal shift_cnt : natural range 0 to BLOCKSIZE-1;
 begin
   exp <= read_pos * BLOCKSIZE + floatshift - BLOCKSIZE + 9;
   ready <= '0' when reset = '1' or
@@ -182,7 +183,7 @@ begin
         write_block <= subblock(addtmp(BLOCKSIZE-1 downto 0));
       when st_fixcarry =>
         write_pos <= read_pos;
-        write_block <= subblock(unsigned(curval) + 1);
+        write_block <= subblock(unsigned(curval) + carry);
       when st_out_float2 =>
         if allvalue(NUMBLOCKS) = '1' then
           curval := not curval;
@@ -247,7 +248,7 @@ begin
           when op_add | op_readblock | op_writeblock =>
             next_pos <= to_integer(signed(pos)) + NUMBLOCKS / 2;
           when op_floatadd =>
-            next_pos <= to_integer(unsigned(input(30 downto 28))) + (NUMBLOCKS / 2 - 4);
+            next_pos <= to_integer(signed((not input(30))&input(29 downto 28))) + NUMBLOCKS / 2;
           when others =>
             next_pos <= 0;
         end case;
@@ -311,7 +312,6 @@ begin
 end process;
 
 get_input : process(clock,reset)
-  variable shift_cnt : natural range 0 to BLOCKSIZE-1;
   variable tmp : addblock;
 begin
   if reset = '1' then
@@ -319,21 +319,22 @@ begin
     sig_sign <= '0';
   elsif rising_edge(clock) then
     case state is
-      when st_in_float0 | st_add0 | st_add1 | st_add2 =>
+      when st_in_float0 =>
+        input <= addblock(unsigned(input) sll shift_cnt);
+      when st_add0 | st_add1 | st_add2 =>
         null;
       when others =>
         if op = op_add and sign = '1' then
           input <= addblock(unsigned(not data_in) + 1);
         elsif op = op_floatadd then
-          shift_cnt := to_integer(unsigned(data_in(27 downto 23)));
-          tmp := X"0000000000"&"1"&data_in(22 downto 0);
+          shift_cnt <= to_integer(unsigned(data_in(27 downto 23)));
           if data_in(30 downto 23) = X"00" then
-            tmp(23) := '0'; -- denormalized value
+            input <= X"0000000000"&"0"&data_in(22 downto 0); -- denormalized value
           elsif data_in(30 downto 23) = X"11" then
-            tmp := (others => '0'); -- ignore Inf and NaN for now
+            input <= (others => '0'); -- ignore Inf and NaN for now
+          else
+            input <= X"0000000000"&"1"&data_in(22 downto 0);
           end if;
-          tmp := addblock(unsigned(tmp) sll shift_cnt);
-          input <= tmp;
         else
           input <= data_in;
         end if;
