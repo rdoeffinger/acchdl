@@ -187,11 +187,11 @@ begin
       last_data <= (others => '0');
     elsif rising_edge(clock) then
       if cmd_stop = '0' then
-      last_cmd <= new_cmd;
-      last_cmd_needs_reply <= new_cmd_needs_reply;
-      last_tag <= new_tag;
-      last_addr <= new_addr;
-      last_data <= new_data;
+        last_cmd <= new_cmd;
+        last_cmd_needs_reply <= new_cmd_needs_reply;
+        last_tag <= new_tag;
+        last_addr <= new_addr;
+        last_data <= new_data;
       end if;
     end if;
   end process;
