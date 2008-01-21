@@ -45,7 +45,7 @@ architecture behaviour of accumulator is
   signal exp : integer;
   signal shift_cnt : natural range 0 to BLOCKSIZE-1;
 begin
-  exp <= read_pos * BLOCKSIZE + floatshift - BLOCKSIZE + 9;
+  exp <= read_pos * BLOCKSIZE + floatshift - 2 * BLOCKSIZE + 9;
   ready <= '0' when reset = '1' or
                     state = st_add0 or state = st_add1 or state = st_add2 or
                     state = st_out_block0 or
@@ -188,12 +188,12 @@ begin
         if allvalue(NUMBLOCKS) = '1' then
           curval := not curval;
         end if;
-        bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := curval;
+        bigtmp(BLOCKSIZE-1 downto 0) := curval;
       when st_out_float3 =>
         if allvalue(NUMBLOCKS) = '1' then
           curval := not curval;
         end if;
-        bigtmp(BLOCKSIZE-1 downto 0) := curval;
+        bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := curval;
         if allvalue(NUMBLOCKS) = '1' then
           bigtmp := std_logic_vector(unsigned(bigtmp) + 1);
         end if;
@@ -227,20 +227,18 @@ begin
     next_pos <= 0;
   elsif rising_edge(clock) then
     case state is
-      when st_add0 =>
+      when st_out_float1 | st_add0 =>
         next_pos <= next_pos + 1;
       when st_add1 =>
         next_pos <= next_pos + 1;
       when st_out_float0 =>
-        next_pos <= 1;
+        next_pos <= 0;
         for i in 1 to NUMBLOCKS - 1 loop
           if allmask(i) = '0' or
             allvalue(i) /= allvalue(NUMBLOCKS) then
-            next_pos <= i;
+            next_pos <= i-1;
           end if;
         end loop;
-      when st_out_float1 =>
-        next_pos <= next_pos - 1;
       when st_out_float2 | st_out_float3 | st_out_float4 =>
         null;
       when others =>
