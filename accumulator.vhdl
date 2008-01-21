@@ -22,8 +22,9 @@ architecture behaviour of accumulator is
   type state_t is (st_ready, st_in_float0, st_add0, st_add1, st_add2, st_fixcarry,
                    st_out_block0, st_out_block1,
                    st_in_block, st_out_status, st_in_status,
-                   st_out_float0, st_out_float1, st_out_float2, st_out_float_normal,
-                   st_out_float_denormal, st_out_float_inf);
+                   st_out_float0, st_out_float1, st_out_float2, st_out_float3,
+                   st_out_float4, st_out_float5,
+                   st_out_float_normal, st_out_float_denormal, st_out_float_inf);
 
   signal accu : accutype;
   signal allmask : flagtype;
@@ -47,7 +48,8 @@ begin
   ready <= '0' when reset = '1' or
                     state = st_add0 or state = st_add1 or state = st_add2 or
                     state = st_out_block0 or
-                    state = st_out_float0 or state = st_out_float1 or state = st_out_float2 or
+                    state = st_out_float0 or state = st_out_float1 or
+                    state = st_out_float2 or state = st_out_float3 or state = st_out_float4 or
                     state = st_in_float0
            else '1';
   data_out <= out_buf;
@@ -179,17 +181,23 @@ begin
       when st_fixcarry =>
         write_pos <= read_pos;
         write_block <= subblock(unsigned(curval) + 1);
-      when st_out_float1 =>
+      when st_out_float2 =>
         if allvalue(NUMBLOCKS) = '1' then
           curval := not curval;
         end if;
         bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := curval;
-        floatshift <= maxbit(curval(BLOCKSIZE-1 downto BLOCKSIZE/2)&X"0000");
-      when st_out_float2 =>
-        if floatshift = 0 then
-          floatshift <= maxbit(X"0000"&bigtmp(BLOCKSIZE + BLOCKSIZE/2 - 1 downto BLOCKSIZE));
+      when st_out_float3 =>
+        if allvalue(NUMBLOCKS) = '1' then
+          curval := not curval;
         end if;
         bigtmp(BLOCKSIZE-1 downto 0) := curval;
+        if allvalue(NUMBLOCKS) = '1' then
+          bigtmp := std_logic_vector(unsigned(bigtmp) + 1);
+        end if;
+      when st_out_float4 =>
+        floatshift <= maxbit(bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE));
+      when st_out_float5 =>
+        null;
       when st_out_float_normal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= std_logic_vector(to_unsigned(exp, 8));
@@ -221,22 +229,21 @@ begin
       when st_add1 =>
         next_pos <= next_pos + 1;
       when st_out_float0 =>
-        next_pos <= next_pos - 1;
+        next_pos <= 1;
+        for i in 1 to NUMBLOCKS - 1 loop
+          if allmask(i) = '0' or
+            allvalue(i) /= allvalue(NUMBLOCKS) then
+            next_pos <= i;
+          end if;
+        end loop;
       when st_out_float1 =>
+        next_pos <= next_pos - 1;
+      when st_out_float2 | st_out_float3 | st_out_float4 =>
         null;
       when others =>
         case op is
           when op_add | op_readblock | op_writeblock =>
             next_pos <= to_integer(signed(pos)) + NUMBLOCKS / 2;
-          when op_readfloat =>
--- FIXME this is wrong here
-            next_pos <= 1;
-            for i in 1 to NUMBLOCKS - 1 loop
-              if allmask(i) = '0' or
-                 allvalue(i) /= allvalue(NUMBLOCKS) then
-                next_pos <= i;
-              end if;
-            end loop;
           when op_floatadd =>
             next_pos <= to_integer(unsigned(input(30 downto 28))) + (NUMBLOCKS / 2 - 4);
           when others =>
@@ -263,6 +270,12 @@ begin
       when st_out_float1 =>
         state <= st_out_float2;
       when st_out_float2 =>
+        state <= st_out_float3;
+      when st_out_float3 =>
+        state <= st_out_float4;
+      when st_out_float4 =>
+        state <= st_out_float5;
+      when st_out_float5 =>
         if exp <= 0 then
           state <= st_out_float_denormal;
         elsif exp >= 255 then
@@ -304,8 +317,7 @@ begin
     sig_sign <= '0';
   elsif rising_edge(clock) then
     case state is
-      when st_in_float0 | st_add0 | st_add1 | st_add2 |
-           st_out_float0 | st_out_float1 | st_out_float2 | st_out_block0 =>
+      when st_in_float0 | st_add0 | st_add1 | st_add2 =>
         null;
       when others =>
         if op = op_add and sign = '1' then
