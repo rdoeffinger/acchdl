@@ -227,7 +227,7 @@ begin
     next_pos <= 0;
   elsif rising_edge(clock) then
     case state is
-      when st_out_float1 | st_add0 =>
+      when st_out_float1 | st_in_float0 | st_add0 =>
         next_pos <= next_pos + 1;
       when st_add1 =>
         next_pos <= next_pos + 1;
