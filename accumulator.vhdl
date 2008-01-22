@@ -45,6 +45,8 @@ architecture behaviour of accumulator is
   signal exp : integer;
   signal shift_cnt : natural range 0 to BLOCKSIZE-1;
   signal ready_sig : std_logic;
+  signal carry_pos : natural range 0 to BLOCKSIZE;
+  signal carry_allvalue : flagtype;
 begin
   exp <= read_pos * BLOCKSIZE + floatshift - 2 * BLOCKSIZE + 9;
   ready <= ready_sig;
@@ -54,6 +56,58 @@ begin
                               state = st_out_float_normal or state = st_out_float_denormal or state = st_out_float_inf
                          else '0';
   data_out <= out_buf;
+
+find_carry_pos : process(clock,reset)
+  variable add : natural;
+  variable tmp : flagtype;
+  variable tmp2 : flagtype;
+  variable cptmp : unsigned(BLOCKBITS - 1 downto 0);
+begin
+  if reset = '1' then
+    carry_pos <= 0;
+    carry_allvalue <= (others => '0');
+  elsif rising_edge(clock) then
+    case state is
+      when st_in_float0 | st_add0 =>
+        add := 2**(next_pos + 2);
+        if sig_sign = '0' then
+          tmp := allvalue and allmask;
+          tmp2 := std_logic_vector(unsigned(tmp) + add);
+          tmp := tmp2 and not tmp;
+          tmp2 := tmp2 and not tmp;
+        else
+          tmp := allvalue or not allmask;
+          tmp2 := std_logic_vector(unsigned(tmp) - add);
+          tmp := tmp and not tmp2;
+          tmp2 := tmp2 or tmp;
+        end if;
+        carry_allvalue <= allvalue xor tmp2;
+        if (tmp and X"aaa") /= X"000" then
+          cptmp(0) := '1';
+        else
+          cptmp(0) := '0';
+        end if;
+        if (tmp and X"ccc") /= X"000" then
+          cptmp(1) := '1';
+        else
+          cptmp(1) := '0';
+        end if;
+        if (tmp and X"0f0") /= X"000" then
+          cptmp(2) := '1';
+        else
+          cptmp(2) := '0';
+        end if;
+        if (tmp and X"f00") /= X"000" then
+          cptmp(3) := '1';
+        else
+          cptmp(3) := '0';
+        end if;
+        carry_pos <= to_integer(cptmp);
+      when others =>
+        null;
+    end case;
+  end if;
+end process;
 
 read : process(clock,reset)
 begin
@@ -111,6 +165,7 @@ begin
 end process;
 
 write_allvalue : process(clock,reset)
+  variable tmp : flagtype;
 begin
   if reset = '1' then
     allvalue <= (others => '0');
@@ -121,7 +176,12 @@ begin
     if state = st_in_status and input(18) = '1' and input(2) = '1' then
       allvalue <= (others => '0');
     else
-      allvalue(write_pos) <= write_block(0);
+      tmp := allvalue;
+      if state = st_fixcarry then
+        tmp := tmp xor carry_allvalue;
+      end if;
+      tmp(write_pos) := write_block(0);
+      allvalue <= tmp;
     end if;
   end if;
 end process;
@@ -252,7 +312,7 @@ begin
       when st_out_float1 | st_in_float0 | st_add0 =>
         next_pos <= next_pos + 1;
       when st_add1 =>
-        next_pos <= next_pos + 1;
+        next_pos <= carry_pos;
       when st_out_float0 =>
         next_pos <= 0;
         for i in 1 to NUMBLOCKS - 1 loop
