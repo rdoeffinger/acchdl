@@ -151,6 +151,11 @@ begin
     if state = st_in_status and input(17) = '1' then
       allmask(NUMBLOCKS) <= not input(1);
     end if;
+    if state = st_fixcarry and carry_pos = 0 and carry = '1' and
+       sig_sign = allvalue(NUMBLOCKS) then
+      -- overflow (we have a sign change when we should not)
+      allmask(NUMBLOCKS) <= '0';
+    end if;
     if state = st_in_status and input(18) = '1' and input(2) = '1' then
       allmask <= (others => '1');
     else
@@ -251,10 +256,12 @@ begin
         write_block <= subblock(addtmp(BLOCKSIZE-1 downto 0));
       when st_fixcarry =>
         write_pos <= read_pos;
-        if sig_sign = '0' then
-          write_block <= subblock(unsigned(curval) + carry);
-        else
-          write_block <= subblock(unsigned(curval) - carry);
+        if read_pos /= 0 then -- 0 means overflow
+          if sig_sign = '0' then
+            write_block <= subblock(unsigned(curval) + carry);
+          else
+            write_block <= subblock(unsigned(curval) - carry);
+          end if;
         end if;
       when st_out_float2 =>
         if allvalue(NUMBLOCKS) = '1' then
