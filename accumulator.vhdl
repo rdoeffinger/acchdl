@@ -151,7 +151,7 @@ begin
     if state = st_in_status and input(17) = '1' then
       allmask(NUMBLOCKS) <= not input(1);
     end if;
-    if state = st_fixcarry and carry_pos = 0 and carry = '1' and
+    if state = st_fixcarry and carry_pos = 0 and carry(0) = '1' and
        sig_sign = allvalue(NUMBLOCKS) then
       -- overflow (we have a sign change when we should not)
       allmask(NUMBLOCKS) <= '0';
