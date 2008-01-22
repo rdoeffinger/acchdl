@@ -44,13 +44,15 @@ architecture behaviour of accumulator is
   signal floatshift : natural range 0 to BLOCKSIZE-1;
   signal exp : integer;
   signal shift_cnt : natural range 0 to BLOCKSIZE-1;
+  signal ready_sig : std_logic;
 begin
   exp <= read_pos * BLOCKSIZE + floatshift - 2 * BLOCKSIZE + 9;
-  ready <= not reset when state = st_ready or state = st_fixcarry or
-                          state = st_out_block1 or state = st_in_block or
-                          state = st_out_status or state = st_in_status or
-                          state = st_out_float_normal or state = st_out_float_denormal or state = st_out_float_inf
-           else '0';
+  ready <= ready_sig;
+  ready_sig <= not reset when state = st_ready or state = st_fixcarry or
+                              state = st_out_block1 or state = st_in_block or
+                              state = st_out_status or state = st_in_status or
+                              state = st_out_float_normal or state = st_out_float_denormal or state = st_out_float_inf
+                         else '0';
   data_out <= out_buf;
 
 read : process(clock,reset)
@@ -224,6 +226,16 @@ begin
   if reset = '1' then
     next_pos <= 0;
   elsif rising_edge(clock) then
+    if ready_sig = '1' then
+      case op is
+        when op_add | op_readblock | op_writeblock =>
+          next_pos <= to_integer(signed(pos)) + NUMBLOCKS / 2;
+        when op_floatadd =>
+          next_pos <= to_integer(unsigned(data_in(30 downto 28))) + (NUMBLOCKS / 2 - 4);
+        when others =>
+          next_pos <= 0;
+      end case;
+    else
     case state is
       when st_out_float1 | st_in_float0 | st_add0 =>
         next_pos <= next_pos + 1;
@@ -237,18 +249,10 @@ begin
             next_pos <= i-1;
           end if;
         end loop;
-      when st_out_float2 | st_out_float3 | st_out_float4 =>
-        null;
       when others =>
-        case op is
-          when op_add | op_readblock | op_writeblock =>
-            next_pos <= to_integer(signed(pos)) + NUMBLOCKS / 2;
-          when op_floatadd =>
-            next_pos <= to_integer(unsigned(data_in(30 downto 28))) + (NUMBLOCKS / 2 - 4);
-          when others =>
-            next_pos <= 0;
-        end case;
+        null;
     end case;
+    end if;
   end if;
 end process;
 
@@ -257,6 +261,26 @@ begin
   if reset = '1' then
     state <= st_ready;
   elsif rising_edge(clock) then
+    if ready_sig = '1' then
+      case op is
+        when op_add =>
+          state <= st_add0;
+        when op_readblock =>
+          state <= st_out_block0;
+        when op_writeblock =>
+          state <= st_in_block;
+        when op_readflags =>
+          state <= st_out_status;
+        when op_writeflags =>
+          state <= st_in_status;
+        when op_readfloat =>
+          state <= st_out_float0;
+        when op_floatadd =>
+          state <= st_in_float0;
+        when others =>
+          state <= st_ready;
+      end case;
+    else
     case state is
       when st_add0 | st_in_float0 =>
         state <= st_add1;
@@ -285,25 +309,9 @@ begin
       when st_out_block0 =>
         state <= st_out_block1;
       when others =>
-        case op is
-          when op_add =>
-            state <= st_add0;
-          when op_readblock =>
-            state <= st_out_block0;
-          when op_writeblock =>
-            state <= st_in_block;
-          when op_readflags =>
-            state <= st_out_status;
-          when op_writeflags =>
-            state <= st_in_status;
-          when op_readfloat =>
-            state <= st_out_float0;
-          when op_floatadd =>
-            state <= st_in_float0;
-          when others =>
-            state <= st_ready;
-        end case;
+        state <= st_ready;
     end case;
+    end if;
   end if;
 end process;
 
@@ -314,32 +322,34 @@ begin
     input <= (others => '0');
     sig_sign <= '0';
   elsif rising_edge(clock) then
+    if ready_sig = '1' then
+      if op = op_add and sign = '1' then
+        input <= addblock(unsigned(not data_in) + 1);
+      elsif op = op_floatadd then
+        shift_cnt <= to_integer(unsigned(data_in(27 downto 23)));
+        if data_in(30 downto 23) = X"00" then
+          input <= X"0000000000"&"0"&data_in(22 downto 0); -- denormalized value
+        elsif data_in(30 downto 23) = X"11" then
+          input <= (others => '0'); -- ignore Inf and NaN for now
+        else
+          input <= X"0000000000"&"1"&data_in(22 downto 0);
+        end if;
+      else
+        input <= data_in;
+      end if;
+      if op = op_floatadd then
+        sig_sign <= sign xor data_in(31);
+      else
+        sig_sign <= sign;
+      end if;
+    else
     case state is
       when st_in_float0 =>
         input <= addblock(unsigned(input) sll shift_cnt);
-      when st_add0 | st_add1 | st_add2 =>
-        null;
       when others =>
-        if op = op_add and sign = '1' then
-          input <= addblock(unsigned(not data_in) + 1);
-        elsif op = op_floatadd then
-          shift_cnt <= to_integer(unsigned(data_in(27 downto 23)));
-          if data_in(30 downto 23) = X"00" then
-            input <= X"0000000000"&"0"&data_in(22 downto 0); -- denormalized value
-          elsif data_in(30 downto 23) = X"11" then
-            input <= (others => '0'); -- ignore Inf and NaN for now
-          else
-            input <= X"0000000000"&"1"&data_in(22 downto 0);
-          end if;
-        else
-          input <= data_in;
-        end if;
-        if op = op_floatadd then
-          sig_sign <= sign xor data_in(31);
-        else
-          sig_sign <= sign;
-        end if;
+        null;
     end case;
+    end if;
   end if;
 end process;
 
