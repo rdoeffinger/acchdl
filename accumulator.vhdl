@@ -46,13 +46,11 @@ architecture behaviour of accumulator is
   signal shift_cnt : natural range 0 to BLOCKSIZE-1;
 begin
   exp <= read_pos * BLOCKSIZE + floatshift - 2 * BLOCKSIZE + 9;
-  ready <= '0' when reset = '1' or
-                    state = st_add0 or state = st_add1 or state = st_add2 or
-                    state = st_out_block0 or
-                    state = st_out_float0 or state = st_out_float1 or
-                    state = st_out_float2 or state = st_out_float3 or state = st_out_float4 or
-                    state = st_in_float0
-           else '1';
+  ready <= not reset when state = st_ready or state = st_fixcarry or
+                          state = st_out_block1 or state = st_in_block or
+                          state = st_out_status or state = st_in_status or
+                          state = st_out_float_normal or state = st_out_float_denormal or state = st_out_float_inf
+           else '0';
   data_out <= out_buf;
 
 read : process(clock,reset)
