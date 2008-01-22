@@ -172,18 +172,30 @@ begin
       when st_add1 =>
         write_pos <= read_pos;
         addtmp := "0"&unsigned(input(BLOCKSIZE-1 downto 0));
-        addtmp := addtmp + unsigned(curval);
+        if sig_sign = '0' then
+          addtmp := unsigned(curval) + addtmp;
+        else
+          addtmp := unsigned(curval) - addtmp;
+        end if;
         carry(0) <= addtmp(BLOCKSIZE);
         write_block <= subblock(addtmp(BLOCKSIZE-1 downto 0));
       when st_add2 =>
         write_pos <= read_pos;
         addtmp := "0"&unsigned(input(2*BLOCKSIZE-1 downto BLOCKSIZE));
-        addtmp := addtmp + unsigned(curval) + carry;
+        if sig_sign = '0' then
+          addtmp := unsigned(curval) + addtmp + carry;
+        else
+          addtmp := unsigned(curval) - addtmp - carry;
+        end if;
         carry(0) <= addtmp(BLOCKSIZE);
         write_block <= subblock(addtmp(BLOCKSIZE-1 downto 0));
       when st_fixcarry =>
         write_pos <= read_pos;
-        write_block <= subblock(unsigned(curval) + carry);
+        if sig_sign = '0' then
+          write_block <= subblock(unsigned(curval) + carry);
+        else
+          write_block <= subblock(unsigned(curval) - carry);
+        end if;
       when st_out_float2 =>
         if allvalue(NUMBLOCKS) = '1' then
           curval := not curval;
