@@ -14,18 +14,19 @@ architecture behaviour of test_accumulator is
   signal acc_pos : position_t;
   signal acc_sign : std_logic;
   signal acc_res : subblock;
-  signal testcycle : integer := 0;
 
-  constant NUMTESTS : integer := 10;
+  constant NUMTESTS : integer := 11;
   type ops_t is array (0 to NUMTESTS - 1) of operation;
   constant ops : ops_t := (
     op_nop, op_floatadd, op_floatadd, op_floatadd, op_readfloat,
+    op_writeflags,
     op_add, op_add, op_add, op_readblock, op_readfloat
   );
 
   type datas_t is array (0 to NUMTESTS - 1) of addblock;
   constant datas : datas_t := (
     (others => 'Z'), X"000000003f800000", X"0000000040000000", X"00000000c0a00000", (others => '1'),
+    X"0000000000040004",
     X"0123456789abcdef", X"19acdefffffff000", (others => '1'), (others => 'Z'), (others => 'Z')
   );
 
@@ -36,12 +37,13 @@ architecture behaviour of test_accumulator is
   type poss_t is array (0 to NUMTESTS - 1) of position_t;
   constant poss : poss_t := (
     pos0, pos0, pos0, pos0, pos0,
+    pos0,
     pos1, pos1, pos1, pos3, pos0
   );
 
   type resets_t is array (0 to NUMTESTS - 1) of std_logic;
   constant resets : resets_t := (
-    '1', '0', '0', '0', '0', '0', '0', '0', '0', '0'
+    '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'
   );
 
 constant ACC_CLOCK_PERIOD : time := 10ns;
@@ -61,16 +63,19 @@ begin
   );
 
   process(acc_clock)
+    variable testcycle : integer := 0;
   begin
     assert testcycle < RUNTIME report "Test Done";
-    if (rising_edge(acc_clock) and testcycle < NUMTESTS) then
-      acc_reset <= resets(testcycle);
-      acc_value <= datas(testcycle);
-      acc_pos <= poss(testcycle);
-      acc_op <= ops(testcycle);
-      acc_sign <= '0';
-      if acc_ready = '1' or resets(testcycle) = '1' then
-        testcycle <= testcycle + 1;
+    if rising_edge(acc_clock) then
+      if acc_ready = '1' or acc_reset = '1' then
+        testcycle := testcycle + 1;
+      end if;
+      if testcycle < NUMTESTS then
+        acc_reset <= resets(testcycle);
+        acc_value <= datas(testcycle);
+        acc_pos <= poss(testcycle);
+        acc_op <= ops(testcycle);
+        acc_sign <= '0';
       end if;
     end if;
   end process;
