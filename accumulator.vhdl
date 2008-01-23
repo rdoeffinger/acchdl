@@ -242,6 +242,8 @@ begin
           else
             write_block <= subblock(unsigned(curval) - carry);
           end if;
+        else
+          write_block <= curval;
         end if;
       when st_out_float2 =>
         if allvalue(NUMBLOCKS) = '1' then
