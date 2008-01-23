@@ -4,8 +4,8 @@ use ieee.numeric_std.all;
 
 package accumulator_types is
   constant BLOCKSIZE : integer := 32;
-  constant BLOCKBITS : integer := 4;
-  constant NUMBLOCKS : integer := 11;
+  constant BLOCKBITS : integer := 5;
+  constant NUMBLOCKS : integer := 23;
   subtype operation is std_logic_vector(2 downto 0);
   subtype position_t is std_logic_vector(8 downto 0);
   constant op_nop : operation := "000";

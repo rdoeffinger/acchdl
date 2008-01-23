@@ -92,7 +92,7 @@ begin
           tmp2 := tmp2 or tmp;
         end if;
         carry_allvalue <= allvalue xor tmp2;
-        carry_pos <= maxbit(X"00000"&tmp);
+        carry_pos <= maxbit(X"00"&tmp);
       when others =>
         null;
     end case;
@@ -204,7 +204,7 @@ begin
       when st_out_status =>
         out_buf(31 downto 16) <= X"0007"; -- valid flags
         out_buf(15 downto 2) <= (others => '0');
-        if (allvalue or not allmask) = X"000" then
+        if (allvalue or not allmask) = X"000000" then
           out_buf(2) <= '1';
         else
           out_buf(2) <= '0';
