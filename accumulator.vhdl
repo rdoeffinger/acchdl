@@ -47,6 +47,16 @@ architecture behaviour of accumulator is
   signal ready_sig : std_logic;
   signal carry_pos : natural range 0 to BLOCKSIZE;
   signal carry_allvalue : flagtype;
+  function maxbit(v: subblock) return integer is
+    variable i : natural range 1 to BLOCKSIZE-1;
+  begin
+    for i in BLOCKSIZE - 1 downto 1 loop
+      if v(i) = '1' then
+        return i;
+      end if;
+    end loop;
+    return 0;
+  end;
 begin
   exp <= read_pos * BLOCKSIZE + floatshift - 2 * BLOCKSIZE + 9;
   ready <= ready_sig;
@@ -82,27 +92,7 @@ begin
           tmp2 := tmp2 or tmp;
         end if;
         carry_allvalue <= allvalue xor tmp2;
-        if (tmp and X"aaa") /= X"000" then
-          cptmp(0) := '1';
-        else
-          cptmp(0) := '0';
-        end if;
-        if (tmp and X"ccc") /= X"000" then
-          cptmp(1) := '1';
-        else
-          cptmp(1) := '0';
-        end if;
-        if (tmp and X"0f0") /= X"000" then
-          cptmp(2) := '1';
-        else
-          cptmp(2) := '0';
-        end if;
-        if (tmp and X"f00") /= X"000" then
-          cptmp(3) := '1';
-        else
-          cptmp(3) := '0';
-        end if;
-        carry_pos <= to_integer(cptmp);
+        carry_pos <= maxbit(X"00000"&tmp);
       when others =>
         null;
     end case;
@@ -195,16 +185,6 @@ execute : process(clock,reset)
   variable addtmp : unsigned(BLOCKSIZE downto 0);
   variable bigtmp : addblock;
   variable curval : subblock;
-  function maxbit(v: subblock) return integer is
-    variable i : natural range 1 to BLOCKSIZE-1;
-  begin
-    for i in BLOCKSIZE - 1 downto 1 loop
-      if v(i) = '1' then
-        return i;
-      end if;
-    end loop;
-    return 0;
-  end;
 begin
   if reset = '1' then
     write_pos <= 0;
