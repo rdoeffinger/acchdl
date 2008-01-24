@@ -120,6 +120,7 @@ begin
   data <= last_data when cmd_stop = '1' else new_data;
 
   handle_reply : process(clock,reset_n)
+    variable put_data : std_logic;
   begin
     if reset_n = '0' then
       response_cmd_put <= '0';
@@ -129,9 +130,11 @@ begin
         if cmd(5 downto 4) = "01" then
           response_cmd_out_cmd <= "110000"; -- read response
           response_cmd_out_format <= "011"; -- 32 bit, data attached
+          put_data := '1';
         else
           response_cmd_out_cmd <= "110011"; -- target done
           response_cmd_out_format <= "010"; -- 32 bit, no data attached
+          put_data := '0';
         end if;
         response_cmd_out_tag <= tag;
       elsif state = READ_WAIT3 then
@@ -139,7 +142,7 @@ begin
       end if;
       if state = READ_WAIT4 and response_cmd_full = '0' and response_data_full = '0' then
         response_cmd_put <= '1';
-        response_data_put <= response_cmd_out_format(0);
+        response_data_put <= put_data;
       else
         response_cmd_put <= '0';
         response_data_put <= '0';
