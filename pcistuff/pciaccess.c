@@ -25,6 +25,10 @@ const char help_text[] =
   "    Quit program\n"
   "  b\n"
   "    Unfinished benchmark code\n"
+  "  sf\n"
+  "  lf\n"
+  "  mf\n"
+  "    Store/load/memory fences\n"
   "  r32 <addr>\n"
   "  r64 <addr>\n"
   "  rf <addr>\n"
@@ -77,18 +81,26 @@ int process_command(volatile uint8_t *mapped) {
   if (strcmp(buffer, "q") == 0 || strcmp(buffer, "quit") == 0)
     return 0;
   if (strcmp(buffer, "b") == 0) {
+#define STEP 1
     int i = 100000000;
     do {
-      mapped_float[0] = 2.0;
-      mapped_float[0] = 2.0;
-      mapped_float[0] = 2.0;
-      mapped_float[0] = 2.0;
-      mapped_float[0] = 2.0;
-      mapped_float[0] = 2.0;
-      mapped_float[0] = 2.0;
-      mapped_float[0] = 2.0;
+      mapped_float[0*STEP] = 2.0;
+      mapped_float[1*STEP] = 2.0;
+      mapped_float[2*STEP] = 2.0;
+      mapped_float[3*STEP] = 2.0;
+      mapped_float[4*STEP] = 2.0;
+      mapped_float[5*STEP] = 2.0;
+      mapped_float[6*STEP] = 2.0;
+      mapped_float[7*STEP] = 2.0;
+      asm("sfence\n\t" ::: "memory");
     } while (--i);
 //    printf("%016"PRIx64"\n", mapped_64[2]);
+  } else if (strcmp(buffer, "sf") == 0) {
+      asm("sfence\n\t" ::: "memory");
+  } else if (strcmp(buffer, "lf") == 0) {
+      asm("lfence\n\t" ::: "memory");
+  } else if (strcmp(buffer, "mf") == 0) {
+      asm("mfence\n\t" ::: "memory");
   } else if (par1 && strcmp(buffer, "r64") == 0) {
     printf("%016"PRIx64"\n", mapped_64[addr]);
   } else if (par1 && strcmp(buffer, "r32") == 0) {
@@ -154,7 +166,7 @@ void uncachable(off_t base, size_t size) {
   int fd;
   char buffer[256];
   snprintf(buffer, sizeof(buffer),
-           "base=0x%08"PRIx64" size=0x%08"PRIx64" type=uncachable\n",
+           "base=0x%08"PRIx64" size=0x%08"PRIx64" type=write-combining\n",
            (uint64_t)base, (uint64_t)size);
   fd = open("/proc/mtrr", O_WRONLY);
   write(fd, buffer, strlen(buffer));
