@@ -22,16 +22,16 @@ constant RUNTIME : integer := 10;
 
   signal if_npcmd : std_logic_vector(95 downto 0);
   signal if_npdata : std_logic_vector(63 downto 0);
-  signal if_npcempty : std_logic;
-  signal if_npdempty : std_logic;
+  signal if_npcempty : std_logic := '0';
+  signal if_npdempty : std_logic := '0';
   signal if_npcget : std_logic;
   signal if_npdget : std_logic;
   signal if_npdc : std_logic;
 
   signal if_pcmd : std_logic_vector(95 downto 0);
   signal if_pdata : std_logic_vector(63 downto 0);
-  signal if_pcempty : std_logic;
-  signal if_pdempty : std_logic;
+  signal if_pcempty : std_logic := '0';
+  signal if_pdempty : std_logic := '0';
   signal if_pcget : std_logic;
   signal if_pdget : std_logic;
   signal if_pdc : std_logic;
@@ -74,12 +74,8 @@ begin
 
   if_npcmd <= X"000000000000000000000014";
   if_npdata <= X"00000000ca000000";
-  if_npcempty <= '0';
-  if_npdempty <= '0';
   if_pcmd <= X"00000000000000000000002c";
   if_pdata <= X"0000000000000000";
-  if_pcempty <= '0';
-  if_pdempty <= '0';
   if_rcfull <= '0';
   if_rdfull <= '0';
 
@@ -89,6 +85,17 @@ begin
     assert testcycle < RUNTIME report "Test Done";
     if rising_edge(if_clock) then
       if_reset_n <= '1';
+      if testcycle < NUMTESTS then
+        if_npcempty <= '0';
+        if_npdempty <= '0';
+        if_pcempty <= '0';
+        if_pdempty <= '0';
+      else
+        if_npcempty <= '1';
+        if_npdempty <= '1';
+        if_pcempty <= '1';
+        if_pdempty <= '1';
+      end if;
       testcycle := testcycle + 1;
     end if;
   end process;
