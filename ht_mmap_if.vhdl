@@ -347,6 +347,7 @@ begin
               buffered_posted_data(31 downto 0) := buffered_posted_data(63 downto 32);
               buffered_posted_data(63 downto 32) := (others => '0');
               buffered_posted_data_low := '0';
+              buffered_posted_data_avail := buffered_posted_cmd_avail;
             else
               buffered_posted_data_avail := '0';
             end if;
