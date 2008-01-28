@@ -116,7 +116,7 @@ begin
   cmd_needs_reply <= last_cmd_needs_reply when cmd_stop = '1' else new_cmd_needs_reply;
   tag <= last_tag when cmd_stop = '1' else new_tag;
   addr <= last_addr when cmd_stop = '1' else new_addr;
-  cmd_reg <= to_integer(unsigned(addr(10 + REGBITS downto 10)));
+  cmd_reg <= to_integer(unsigned(addr(10 + REGBITS - 1 downto 10)));
   data <= last_data when cmd_stop = '1' else new_data;
 
   handle_reply : process(clock,reset_n)
