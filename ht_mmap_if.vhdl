@@ -269,8 +269,10 @@ begin
   process(clock,reset_n)
   variable buffered_posted_cmd_avail : std_logic;
   variable buffered_posted_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
+  variable buffered_posted_count : unsigned(COUNT_LEN - 1 downto 0);
   variable buffered_posted_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
   variable buffered_posted_data_avail : std_logic;
+  variable buffered_posted_data_low : std_logic;
   variable buffered_posted_data : std_logic_vector(63 downto 0);
   variable buffered_nonposted_cmd_avail : std_logic;
   variable buffered_nonposted_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
@@ -305,12 +307,14 @@ begin
     elsif rising_edge(clock) then
       if buffered_posted_cmd_avail = '0' then
         buffered_posted_cmd := posted_cmd_in_cmd;
+        buffered_posted_count := unsigned(posted_cmd_in_count);
         buffered_posted_addr := posted_cmd_in_addr;
       end if;
       buffered_posted_cmd_avail := buffered_posted_cmd_avail or not posted_cmd_empty;
 
       if buffered_posted_data_avail = '0' then
         buffered_posted_data := posted_data_in;
+        buffered_posted_data_low := '1';
       end if;
       buffered_posted_data_avail := buffered_posted_data_avail or not posted_data_empty;
 
@@ -329,13 +333,24 @@ begin
       if cmd_stop = '0' then
         if buffered_posted_cmd_avail = '1' and
           (buffered_posted_data_avail = '1' or not needs_data(buffered_posted_cmd)) then
-          buffered_posted_cmd_avail := '0';
-          buffered_posted_data_avail := '0';
+          if not needs_data(buffered_posted_cmd) or buffered_posted_count = 0 then
+            buffered_posted_cmd_avail := '0';
+          end if;
+          buffered_posted_count := buffered_posted_count - 1;
           new_cmd <= buffered_posted_cmd;
           new_cmd_needs_reply <= '0';
           new_tag <= (others => '0');
           new_addr <= buffered_posted_addr;
           new_data <= buffered_posted_data;
+          if needs_data(buffered_posted_cmd) then
+            if buffered_posted_data_low = '1' then
+              buffered_posted_data(31 downto 0) := buffered_posted_data(63 downto 32);
+              buffered_posted_data(63 downto 32) := (others => '0');
+              buffered_posted_data_low := '0';
+            else
+              buffered_posted_data_avail := '0';
+            end if;
+          end if;
         elsif buffered_nonposted_cmd_avail = '1' and
              (buffered_nonposted_data_avail = '1' or not needs_data(buffered_nonposted_cmd)) then
           buffered_nonposted_cmd_avail := '0';
