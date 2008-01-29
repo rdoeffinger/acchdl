@@ -172,7 +172,7 @@ begin
       allvalue <= (others => '0');
     else
       tmp := allvalue;
-      if state = st_fixcarry then
+      if state = st_fixcarry and carry(0) = '1' then
         tmp := tmp xor carry_allvalue;
       end if;
       tmp(write_pos) := write_block(0);
