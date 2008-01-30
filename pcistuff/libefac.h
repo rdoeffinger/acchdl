@@ -9,7 +9,7 @@ extern uint8_t efac_regs[];
 extern int efac_idx;
 int efac_init(void);
 static inline efac_unused void efac_acc(int reg, float val) {
-  volatile float *regb = &efac_regs[reg * 4096];
+  volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
   regb[efac_idx++] = val;
   if (!(efac_idx & 8))
     return;

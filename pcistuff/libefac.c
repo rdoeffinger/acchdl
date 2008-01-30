@@ -69,6 +69,7 @@ static void set_mtrr(off_t base, size_t size, char *mode) {
 #define EFAC_ALIGNED(n, t, v) t v __attribute__((aligned(n)))
 
 EFAC_ALIGNED(REGSZ, volatile uint8_t, efac_regs[REGCNT * REGSZ]);
+int efac_idx;
 
 int efac_init(void) {
   size_t map_size = 0;
