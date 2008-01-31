@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <pci/pci.h>
+#include "libefac.h"
 
 #define VENDOR 7
 #define DEVICE 7

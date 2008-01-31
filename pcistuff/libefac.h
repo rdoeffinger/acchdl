@@ -5,7 +5,7 @@
 
 #define efac_unused __attribute__((unused))
 
-extern uint8_t efac_regs[];
+extern volatile uint8_t efac_regs[];
 extern int efac_idx;
 int efac_init(void);
 
