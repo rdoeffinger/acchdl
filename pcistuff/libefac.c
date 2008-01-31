@@ -49,7 +49,7 @@ static void *map_physical(void * dst, off_t base, size_t size) {
     return NULL;
   }
   if (dst) flags |= MAP_FIXED;
-  mapped = mmap(dst, size, PROT_READ | PROT_WRITE, MAP_SHARED, memfd, base);
+  mapped = mmap(dst, size, PROT_READ | PROT_WRITE, flags, memfd, base);
   close(memfd);
   return mapped;
 }
