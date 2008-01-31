@@ -25,6 +25,8 @@ const char help_text[] =
   "  lf\n"
   "  mf\n"
   "    Store/load/memory fences\n"
+  "  a <reg> <float>\n"
+  "    Add float to register reg\n"
   "  r32 <addr>\n"
   "  r64 <addr>\n"
   "  rf <addr>\n"
@@ -80,16 +82,8 @@ int process_command(volatile uint8_t *mapped) {
 #define STEP 1
     int i = 100000000;
     do {
-      mapped_float[0*STEP] = 2.0;
-      mapped_float[1*STEP] = 2.0;
-      mapped_float[2*STEP] = 2.0;
-      mapped_float[3*STEP] = 2.0;
-      asm("sfence\n\t" ::: "memory");
-      mapped_float[4*STEP] = 2.0;
-      mapped_float[5*STEP] = 2.0;
-      mapped_float[6*STEP] = 2.0;
-      mapped_float[7*STEP] = 2.0;
-      asm("sfence\n\t" ::: "memory");
+      efac_acc4(0, 2.0, 2.0, 2.0, 2.0);
+      efac_acc4(0, 2.0, 2.0, 2.0, 2.0);
     } while (--i);
 //    printf("%016"PRIx64"\n", mapped_64[2]);
   } else if (strcmp(buffer, "sf") == 0) {
@@ -106,6 +100,10 @@ int process_command(volatile uint8_t *mapped) {
     printf("%e\n", (double)mapped_float[addr]);
   } else if (par1 && strcmp(buffer, "rd") == 0) {
     printf("%e\n", mapped_double[addr]);
+  } else if (par1 && strcmp(buffer, "r") == 0) {
+    printf("%e\n", (double)efac_read(addr));
+  } else if (par1 && strcmp(buffer, "c") == 0) {
+    efac_clear(addr);
   } else if (par1 && par2 && strcmp(buffer, "w64") == 0) {
     mapped_64[addr] = vali;
   } else if (par1 && par2 && strcmp(buffer, "w32") == 0) {
@@ -120,6 +118,8 @@ printf("%08x\n", dbg.i);
     mapped_float[addr] = valf;
   } else if (par1 && par2 && strcmp(buffer, "wd") == 0) {
     mapped_double[addr] = valf;
+  } else if (par1 && par2 && strcmp(buffer, "a") == 0) {
+    efac_acc(addr, valf);
   } else
     printf("Unknown or invalid command\n");
   return 1;
