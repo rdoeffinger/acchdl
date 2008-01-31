@@ -120,6 +120,8 @@ printf("%08x\n", dbg.i);
     mapped_double[addr] = valf;
   } else if (par1 && par2 && strcmp(buffer, "a") == 0) {
     efac_add(addr, valf);
+  } else if (par1 && par2 && strcmp(buffer, "s") == 0) {
+    efac_sub(addr, valf);
   } else
     printf("Unknown or invalid command\n");
   return 1;
