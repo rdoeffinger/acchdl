@@ -15,7 +15,7 @@ static inline efac_unused void efac_clear(int reg) {
   asm("sfence\n\t":::"memory");
 }
 
-static inline efac_unused void efac_acc(int reg, float val) {
+static inline efac_unused void efac_add(int reg, float val) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
   regb[efac_idx++] = val;
   if (!(efac_idx & 8))
@@ -23,7 +23,7 @@ static inline efac_unused void efac_acc(int reg, float val) {
   asm("sfence\n\t":::"memory");
   efac_idx = 0;
 }
-static inline efac_unused void efac_acc4(int reg,
+static inline efac_unused void efac_add4(int reg,
           float val1, float val2, float val3, float val4) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
   regb[16+0] = val1;

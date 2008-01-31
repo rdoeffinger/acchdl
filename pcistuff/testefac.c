@@ -82,8 +82,8 @@ int process_command(volatile uint8_t *mapped) {
 #define STEP 1
     int i = 100000000;
     do {
-      efac_acc4(0, 2.0, 2.0, 2.0, 2.0);
-      efac_acc4(0, 2.0, 2.0, 2.0, 2.0);
+      efac_add4(0, 2.0, 2.0, 2.0, 2.0);
+      efac_add4(0, 2.0, 2.0, 2.0, 2.0);
     } while (--i);
 //    printf("%016"PRIx64"\n", mapped_64[2]);
   } else if (strcmp(buffer, "sf") == 0) {
@@ -119,7 +119,7 @@ printf("%08x\n", dbg.i);
   } else if (par1 && par2 && strcmp(buffer, "wd") == 0) {
     mapped_double[addr] = valf;
   } else if (par1 && par2 && strcmp(buffer, "a") == 0) {
-    efac_acc(addr, valf);
+    efac_add(addr, valf);
   } else
     printf("Unknown or invalid command\n");
   return 1;
