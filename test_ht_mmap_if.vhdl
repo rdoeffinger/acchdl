@@ -8,10 +8,17 @@ end test_ht_mmap_if;
 architecture behaviour of test_ht_mmap_if is
   constant NUMTESTS : integer := 10;
 
---  type resets_t is array (0 to NUMTESTS - 1) of std_logic;
---  constant resets : resets_t := (
---    '1', '0', '0', '0', '0', '0', '0', '0', '0', '0'
---  );
+  constant pcemptys : std_logic_vector(0 to NUMTESTS - 1) := (
+    '1', '0', '1', '1', '0', '0', '0', '1', '1', '1'
+  );
+
+  constant pdemptys : std_logic_vector(0 to NUMTESTS - 1) := (
+    '1', '0', '1', '1', '0', '0', '0', '1', '1', '1'
+  );
+
+  constant resets : std_logic_vector(0 to NUMTESTS - 1) := (
+    '1', '0', '0', '0', '0', '0', '0', '0', '0', '0'
+  );
 
 constant ACC_CLOCK_PERIOD : time := 10ns;
 
@@ -72,10 +79,10 @@ begin
     response_data_put => if_rdput
   );
 
-  if_npcmd <= X"000000000000000000000014";
-  if_npdata <= X"00000000ca000000";
-  if_pcmd <= X"00000000000000000000002c";
-  if_pdata <= X"0000000000000000";
+  if_npcmd <= X"000000000000001000000014";
+  if_npdata <= X"0000000000000000";
+  if_pcmd <= X"00000000000000100000002c";
+  if_pdata <= X"00000000ca000000";
   if_rcfull <= '0';
   if_rdfull <= '0';
 
@@ -88,8 +95,8 @@ begin
       if testcycle < NUMTESTS then
         if_npcempty <= '0';
         if_npdempty <= '0';
-        if_pcempty <= '0';
-        if_pdempty <= '0';
+        if_pcempty <= pcemptys(testcycle);
+        if_pdempty <= pdemptys(testcycle);
       else
         if_npcempty <= '1';
         if_npdempty <= '1';
