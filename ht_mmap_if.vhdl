@@ -290,7 +290,7 @@ begin
   end;
   begin
     if reset_n = '0' then
-      posted_data_complete <= '1';
+      posted_data_complete <= '0';
       posted_cmd_get <= '1';
       posted_data_get <= '1';
       nonposted_cmd_get <= '1';
@@ -312,6 +312,11 @@ begin
       end if;
       buffered_posted_cmd_avail := buffered_posted_cmd_avail or not posted_cmd_empty;
 
+      if buffered_posted_count < 2 then
+        posted_data_complete <= not buffered_posted_data_avail and not posted_data_empty;
+      else
+        posted_data_complete <= '0';
+      end if;
       if buffered_posted_data_avail = '0' then
         buffered_posted_data := posted_data_in;
         buffered_posted_data_low := '1';
@@ -372,7 +377,6 @@ begin
 
       posted_cmd_get <= not buffered_posted_cmd_avail;
       posted_data_get <= not buffered_posted_data_avail;
-      posted_data_complete <= not buffered_posted_data_avail;
       nonposted_cmd_get <= not buffered_nonposted_cmd_avail;
       nonposted_data_get <= not buffered_nonposted_data_avail;
     end if;
