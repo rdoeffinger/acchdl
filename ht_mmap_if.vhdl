@@ -202,7 +202,7 @@ begin
   set_stop : process(clock,reset_n)
   begin
     if reset_n = '0' then
-	   cmd_stop <= '0';
+      cmd_stop <= '0';
     elsif rising_edge(clock) then
       if state = START then
         cmd_stop <= not ready(cmd_reg);
@@ -284,9 +284,9 @@ begin
     variable res : boolean;
   begin
     res := cmd(4 downto 3) = "01"; -- write request
-	 res := res or cmd = "110000"; -- read response
-	 res := res or cmd = "111101"; -- atomic read-modify-write
-	 return res;
+    res := res or cmd = "110000"; -- read response
+    res := res or cmd = "111101"; -- atomic read-modify-write
+    return res;
   end;
   begin
     if reset_n = '0' then
