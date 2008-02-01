@@ -78,8 +78,8 @@ begin
     carry_allvalue <= (others => '0');
   elsif rising_edge(clock) then
     case state is
-      when st_in_float0 | st_add0 =>
-        add := 2**(next_pos + 2);
+      when st_add1 =>
+        add := 2**(read_pos + 2);
         if sig_sign = '0' then
           tmp := allvalue and allmask;
           tmp2 := std_logic_vector(unsigned(tmp) + add);
@@ -119,7 +119,11 @@ begin
   if reset = '1' then
     read_pos <= 0;
   elsif rising_edge(clock) then
-    read_pos <= next_pos;
+    if state = st_add2 then
+      read_pos <= carry_pos;
+    else
+      read_pos <= next_pos;
+    end if;
   end if;
 end process;
 
@@ -236,7 +240,7 @@ begin
         write_block <= subblock(addtmp(BLOCKSIZE-1 downto 0));
       when st_fixcarry =>
         write_pos <= read_pos;
-        if read_pos /= 0 then -- 0 means overflow
+        if carry(0) = '1' and read_pos /= 0 then -- 0 means overflow
           if sig_sign = '0' then
             write_block <= subblock(unsigned(curval) + carry);
           else
@@ -300,8 +304,6 @@ begin
     case state is
       when st_out_float1 | st_in_float0 | st_add0 =>
         next_pos <= next_pos + 1;
-      when st_add1 =>
-        next_pos <= carry_pos;
       when st_out_float0 =>
         next_pos <= 0;
         for i in 1 to NUMBLOCKS - 1 loop
