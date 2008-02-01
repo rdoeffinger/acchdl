@@ -1,4 +1,4 @@
-CFLAGS = -g -O3 -W -Wall
+CFLAGS = -g -O3 -W -Wall -Wcast-qual -Wdeclaration-after-statement -Wpointer-arith -Wredundant-decls
 CC = gcc
 
 all: pciaccess testefac
