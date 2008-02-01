@@ -27,7 +27,7 @@ architecture behaviour of test_accumulator is
 
   type datas_t is array (0 to NUMTESTS - 1) of addblock;
   constant datas : datas_t := (
-    (others => 'Z'), X"000000003f800000", X"0000000040000000", X"00000000c0a00000", (others => '1'),
+    (others => 'Z'), X"000000003f800000", X"0000000040200000", X"00000000c0a00000", (others => '1'),
     X"0000000000040004",
     X"00000000457a0000", X"00000000c3960000", X"00000000c3960000", (others => '1'),
     X"0000000000040004",
@@ -73,6 +73,9 @@ begin
   begin
     assert testcycle < RUNTIME report "Test Done";
     if rising_edge(acc_clock) then
+      if testcycle = 6 then
+        assert acc_res = X"bfc00000" report "Bad value 1";
+      end if;
       if acc_ready = '1' or acc_reset = '1' then
         testcycle := testcycle + 1;
       end if;
