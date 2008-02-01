@@ -38,10 +38,10 @@ const char help_text[] =
   "";
 
 int process_command(volatile uint8_t *mapped) {
-  volatile double *mapped_double = (double *)mapped;
-  volatile float *mapped_float = (float *)mapped;
-  volatile uint32_t *mapped_32 = (uint32_t *)mapped;
-  volatile uint64_t *mapped_64 = (uint64_t *)mapped;
+  volatile double *mapped_double = (volatile double *)mapped;
+  volatile float *mapped_float = (volatile float *)mapped;
+  volatile uint32_t *mapped_32 = (volatile uint32_t *)mapped;
+  volatile uint64_t *mapped_64 = (volatile uint64_t *)mapped;
   uint64_t vali;
   double valf;
   int addr;
