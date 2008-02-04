@@ -379,10 +379,10 @@ begin
       when st_out_float4 =>
         state <= st_out_float5;
       when st_out_float5 =>
-        if exp <= 0 then
-          state <= st_out_float_denormal;
-        elsif exp >= 255 then
+        if exp >= 255 or allmask(NUMBLOCKS) = '0' then
           state <= st_out_float_inf;
+        elsif exp <= 0 then
+          state <= st_out_float_denormal;
         else
           state <= st_out_float_normal;
         end if;
