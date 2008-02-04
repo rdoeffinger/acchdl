@@ -186,7 +186,11 @@ begin
         tmp := tmp xor carry_allvalue;
       end if;
       tmp(write_pos) := write_block(0);
-      allvalue <= tmp;
+      if state = st_fixcarry then
+        allvalue <= tmp;
+      else
+        allvalue(NUMBLOCKS - 1 downto 0) <= tmp(NUMBLOCKS - 1 downto 0);
+      end if;
     end if;
   end if;
 end process;
@@ -223,7 +227,9 @@ begin
         out_buf(0) <= allvalue(NUMBLOCKS);
       when st_in_status =>
         -- handled in write_allvalue and write_allmask processes
-        null;
+        if input(18) = '1' and input(2) = '1' then
+          write_block <= (others => '0');
+        end if;
       when st_add1 =>
         write_pos <= read_pos;
         addtmp := "0"&unsigned(input(BLOCKSIZE-1 downto 0));
@@ -404,9 +410,9 @@ begin
         if data_in(30 downto 23) = X"00" then
           input <= X"0000000000"&"0"&data_in(22 downto 0); -- denormalized value
         elsif data_in(30 downto 23) = X"FF" then
-          -- Inf or NaN, set sign and overflow flags
+          -- Inf or NaN, set overflow flag
           -- we will be executing an op_writeflags
-          input <= X"000000000003000"&"001"&data_in(31);
+          input <= X"0000000000020002";
         else
           input <= X"0000000000"&"1"&data_in(22 downto 0);
         end if;
