@@ -45,7 +45,7 @@ architecture behaviour of accumulator is
   signal exp : integer;
   signal shift_cnt : natural range 0 to BLOCKSIZE-1;
   signal ready_sig : std_logic;
-  signal carry_pos : natural range 0 to BLOCKSIZE;
+  signal carry_pos : natural range 0 to NUMBLOCKS;
   signal carry_allvalue : flagtype;
   function maxbit(v: subblock) return integer is
     variable i : natural range 1 to BLOCKSIZE-1;
@@ -100,16 +100,22 @@ begin
 end process;
 
 read : process(clock,reset)
+variable pos : natural range 0 to NUMBLOCKS - 1;
 begin
   if reset = '1' then
     read_block <= (others => '0');
   elsif rising_edge(clock) then
-    if next_pos = write_pos then
-      read_block <= write_block;
-    elsif allmask(next_pos) = '1' then
-      read_block <= (others => allvalue(next_pos));
+    if state = st_add2 then
+	   pos := carry_pos;
     else
-      read_block <= accu(next_pos);
+	   pos := next_pos;
+    end if;
+    if pos = write_pos then
+      read_block <= write_block;
+    elsif allmask(pos) = '1' then
+      read_block <= (others => allvalue(pos));
+    else
+      read_block <= accu(pos);
     end if;
   end if;
 end process;
@@ -274,7 +280,7 @@ begin
       when st_out_float_denormal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= X"00";
-        out_buf(22 downto 0) <= bigtmp(31 downto 9);
+        out_buf(22 downto 0) <= bigtmp(54 downto 32);
       when st_out_float_inf =>
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= X"FF";
@@ -305,8 +311,8 @@ begin
       when st_out_float1 | st_in_float0 | st_add0 =>
         next_pos <= next_pos + 1;
       when st_out_float0 =>
-        next_pos <= 0;
-        for i in 1 to NUMBLOCKS - 1 loop
+        next_pos <= NUMBLOCKS / 2 - 4 - 1;
+        for i in NUMBLOCKS / 2 - 4 to NUMBLOCKS - 1 loop
           if allmask(i) = '0' or
             allvalue(i) /= allvalue(NUMBLOCKS) then
             next_pos <= i-1;
@@ -339,7 +345,12 @@ begin
         when op_readfloat =>
           state <= st_out_float0;
         when op_floatadd =>
-          state <= st_in_float0;
+          if data_in(30 downto 23) = X"FF" then
+            -- Inf or NaN
+            state <= st_in_status;
+          else
+            state <= st_in_float0;
+          end if;
         when others =>
           state <= st_ready;
       end case;
@@ -392,8 +403,10 @@ begin
         shift_cnt <= to_integer(unsigned(data_in(27 downto 23)));
         if data_in(30 downto 23) = X"00" then
           input <= X"0000000000"&"0"&data_in(22 downto 0); -- denormalized value
-        elsif data_in(30 downto 23) = X"11" then
-          input <= (others => '0'); -- ignore Inf and NaN for now
+        elsif data_in(30 downto 23) = X"FF" then
+          -- Inf or NaN, set sign and overflow flags
+          -- we will be executing an op_writeflags
+          input <= X"000000000003000"&"001"&data_in(31);
         else
           input <= X"0000000000"&"1"&data_in(22 downto 0);
         end if;
