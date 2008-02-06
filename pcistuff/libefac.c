@@ -45,7 +45,7 @@ static void *map_physical(void * dst, off_t base, size_t size) {
   int flags = MAP_SHARED;
   int memfd = open("/dev/mem", O_RDWR);
   if (memfd == -1) {
-    printf("could not open '/dev/mem'\n");
+    dbgprintf("could not open '/dev/mem'\n");
     return NULL;
   }
   if (dst) flags |= MAP_FIXED;
