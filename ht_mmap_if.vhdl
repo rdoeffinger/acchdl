@@ -341,7 +341,9 @@ begin
           if not needs_data(buffered_posted_cmd) or buffered_posted_count = 0 then
             buffered_posted_cmd_avail := '0';
           end if;
-          buffered_posted_count := buffered_posted_count - 1;
+          if buffered_posted_count > 0 then
+            buffered_posted_count := buffered_posted_count - 1;
+          end if;
           new_cmd <= buffered_posted_cmd;
           new_cmd_needs_reply <= '0';
           new_tag <= (others => '0');
