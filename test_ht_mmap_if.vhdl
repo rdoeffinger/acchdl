@@ -74,7 +74,7 @@ begin
     response_cmd_out => if_rcmd,
     response_data_out => if_rdata,
     response_cmd_full => if_rcfull,
-	 response_data_full => if_rdfull,
+    response_data_full => if_rdfull,
     response_cmd_put => if_rcput,
     response_data_put => if_rdput
   );

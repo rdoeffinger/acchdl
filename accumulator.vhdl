@@ -106,9 +106,9 @@ begin
     read_block <= (others => '0');
   elsif rising_edge(clock) then
     if state = st_add2 then
-	   pos := carry_pos;
+      pos := carry_pos;
     else
-	   pos := next_pos;
+      pos := next_pos;
     end if;
     if pos = write_pos then
       read_block <= write_block;
