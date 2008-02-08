@@ -386,7 +386,7 @@ begin
       else
         p_cmd_stop <= '1';
       end if;
-      if p_data_avail = '0' or (cmd_stop = '0' and needs_data(p_cmd) and (p_done(0) = '1' or p_done = p_count)) then
+      if p_data_avail = '0' or (cmd_stop = '0' and p_cmd_avail = '1' and needs_data(p_cmd) and (p_done(0) = '1' or p_done = p_count)) then
         p_data_stop <= '0';
       else
         p_data_stop <= '1';
@@ -407,7 +407,9 @@ begin
           end if;
           if not needs_data(p_cmd) or p_done = p_count then
             p_done := (others => '0');
-            posted_data_complete <= '1';
+            if needs_data(p_cmd) then
+              posted_data_complete <= '1';
+            end if;
           else
             p_done := p_done + 1;
           end if;
