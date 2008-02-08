@@ -20,6 +20,19 @@ architecture behaviour of test_ht_mmap_if is
     '1', '0', '0', '0', '0', '0', '0', '0', '0', '0'
   );
 
+  type addrs_t is array (0 to NUMTESTS - 1) of std_logic_vector(15 downto 0);
+  constant p_addrs : addrs_t := (
+    X"0000", X"0000", X"0000", X"0001", X"0001", X"0001", X"0400", X"0400",
+    X"0400", X"0400"
+  );
+
+  type datas_t is array (0 to NUMTESTS - 1) of std_logic_vector(63 downto 0);
+  constant p_datas : datas_t := (
+    X"00000000ca000000", X"00000000ca000000", X"00000000ca000000", X"00000000ca000800",
+    X"00000000ca000800", X"00000000ca000800", X"00000000ca000000", X"00000000ca000000",
+    X"00000000ca000000", X"00000000ca000000"
+  );
+
 constant ACC_CLOCK_PERIOD : time := 10ns;
 
 constant RUNTIME : integer := 10;
@@ -79,10 +92,12 @@ begin
     response_data_put => if_rdput
   );
 
-  if_npcmd <= X"000000000000001000000014";
+  if_npcmd(95 downto 42) <= (others => '0');
+  if_npcmd(41 downto 26) <= (others => '0');
+  if_npcmd(25 downto 0)  <= "00"&X"000014";
   if_npdata <= X"0000000000000000";
-  if_pcmd <= X"00000000000000100000002c";
-  if_pdata <= X"00000000ca000000";
+  if_pcmd(95 downto 42) <= (others => '0');
+  if_pcmd(25 downto 0)  <= "00"&X"00002c";
   if_rcfull <= '0';
   if_rdfull <= '0';
 
@@ -97,11 +112,15 @@ begin
         if_npdempty <= '0';
         if_pcempty <= pcemptys(testcycle);
         if_pdempty <= pdemptys(testcycle);
+        if_pcmd(41 downto 26) <= p_addrs(testcycle);
+        if_pdata <= p_datas(testcycle);
       else
         if_npcempty <= '1';
         if_npdempty <= '1';
         if_pcempty <= '1';
         if_pdempty <= '1';
+        if_pcmd(41 downto 26) <= (others => '0');
+        if_pdata <= X"00000000ca000000";
       end if;
       testcycle := testcycle + 1;
     end if;
