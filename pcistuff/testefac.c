@@ -37,6 +37,8 @@ const char help_text[] =
   "  wd <addr> <float>\n"
   "";
 
+static uint32_t store[512];
+
 int process_command(volatile uint8_t *mapped) {
   volatile double *mapped_double = (volatile double *)mapped;
   volatile float *mapped_float = (volatile float *)mapped;
@@ -104,6 +106,10 @@ int process_command(volatile uint8_t *mapped) {
     printf("%e\n", (double)efac_read(addr));
   } else if (par1 && strcmp(buffer, "c") == 0) {
     efac_clear(addr);
+  } else if (par1 && strcmp(buffer, "sv") == 0) {
+    efac_save(addr, store);
+  } else if (par1 && strcmp(buffer, "rs") == 0) {
+    efac_restore(addr, store);
   } else if (par1 && par2 && strcmp(buffer, "w64") == 0) {
     mapped_64[addr] = vali;
   } else if (par1 && par2 && strcmp(buffer, "w32") == 0) {

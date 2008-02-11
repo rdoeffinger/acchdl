@@ -8,6 +8,8 @@
 extern volatile uint8_t efac_regs[];
 extern int efac_idx;
 int efac_init(void);
+void efac_save(int reg, uint32_t buf[512]);
+void efac_restore(int reg, const uint32_t buf[512]);
 
 static inline efac_unused void efac_clear(int reg) {
   volatile uint32_t *regb = (volatile uint32_t *)&efac_regs[reg * 4096];
