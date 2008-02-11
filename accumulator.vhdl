@@ -275,17 +275,19 @@ begin
           bigtmp := std_logic_vector(unsigned(bigtmp) + 1);
         end if;
       when st_out_float4 =>
-        floatshift <= maxbit(bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE));
+        floatshift <= BLOCKSIZE - 1 - maxbit(bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE));
       when st_out_float5 =>
         null;
       when st_out_float_normal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= std_logic_vector(to_unsigned(exp, 8));
-        bigtmp := std_logic_vector(unsigned(bigtmp) sll (BLOCKSIZE - 1 - floatshift));
+        bigtmp := std_logic_vector(unsigned(bigtmp) sll floatshift);
+--        bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**7);
         out_buf(22 downto 0) <= bigtmp(62 downto 40);
       when st_out_float_denormal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= X"00";
+--        bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**0);
         out_buf(22 downto 0) <= bigtmp(55 downto 33);
       when st_out_float_inf =>
         out_buf(31) <= allvalue(NUMBLOCKS);
