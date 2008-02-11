@@ -45,7 +45,7 @@ architecture behaviour of accumulator is
   signal exp : integer;
   signal shift_cnt : natural range 0 to BLOCKSIZE-1;
   signal ready_sig : std_logic;
-  signal carry_pos : natural range 0 to NUMBLOCKS;
+  signal carry_pos : natural range 0 to NUMBLOCKS-1;
   signal carry_allvalue : flagtype;
   function maxbit(v: subblock) return integer is
     variable i : natural range 1 to BLOCKSIZE-1;
@@ -92,7 +92,7 @@ begin
           tmp2 := tmp2 or tmp;
         end if;
         carry_allvalue <= allvalue xor tmp2;
-        carry_pos <= maxbit(X"00"&tmp);
+        carry_pos <= maxbit(X"00"&"0"&tmp(NUMBLOCKS-1 downto 0));
       when others =>
         null;
     end case;
