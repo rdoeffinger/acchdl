@@ -286,7 +286,7 @@ begin
       when st_out_float_denormal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= X"00";
-        out_buf(22 downto 0) <= bigtmp(54 downto 32);
+        out_buf(22 downto 0) <= bigtmp(55 downto 33);
       when st_out_float_inf =>
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= X"FF";
@@ -408,7 +408,7 @@ begin
       elsif op = op_floatadd then
         shift_cnt <= to_integer(unsigned(data_in(27 downto 23)));
         if data_in(30 downto 23) = X"00" then
-          input <= X"0000000000"&"0"&data_in(22 downto 0); -- denormalized value
+          input <= X"0000000000"&data_in(22 downto 0)&"0"; -- denormalized value
         elsif data_in(30 downto 23) = X"FF" then
           -- Inf or NaN, set overflow flag
           -- we will be executing an op_writeflags
