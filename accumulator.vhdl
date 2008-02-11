@@ -281,8 +281,8 @@ begin
       when st_out_float_normal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= std_logic_vector(to_unsigned(exp, 8));
-        bigtmp := std_logic_vector(unsigned(bigtmp) srl floatshift);
-        out_buf(22 downto 0) <= bigtmp(31 downto 9);
+        bigtmp := std_logic_vector(unsigned(bigtmp) sll (BLOCKSIZE - 1 - floatshift));
+        out_buf(22 downto 0) <= bigtmp(62 downto 40);
       when st_out_float_denormal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= X"00";
