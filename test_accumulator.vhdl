@@ -70,9 +70,18 @@ architecture behaviour of test_accumulator is
     '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'
   );
 
+  constant NUMREADS : integer := 5;
+  type results_t is array (0 to NUMREADS - 1) of subblock;
+  constant results : results_t := (
+    X"bfc00000", X"45548000", X"00080001", X"FF800000", X"7F800000"
+  );
+
 constant ACC_CLOCK_PERIOD : time := 10ns;
 
 constant RUNTIME : integer := NUMTESTS + 3;
+
+type boolean_vector is array (natural range <>) of boolean;
+signal pending_read : boolean_vector(1 downto 0)  := (false, false);
 
 begin
   acc : accumulator port map (
@@ -88,23 +97,19 @@ begin
 
   process(acc_clock)
     variable testcycle : integer := 0;
+    variable readcycle : integer := 0;
   begin
     assert testcycle < RUNTIME report "Test Done";
     if rising_edge(acc_clock) then
-      if testcycle = 6 then
-        assert acc_res = X"bfc00000" report "Bad value 1";
+      if pending_read(0) and readcycle < NUMREADS then
+        assert acc_res = results(readcycle) report "Bad value "&integer'image(readcycle);
+        readcycle := readcycle + 1;
       end if;
-      if testcycle = 11 then
-        assert acc_res = X"45548000" report "Bad value 2";
-      end if;
-      if testcycle = 16 then
-        assert acc_res = X"00080001" report "Bad value 3";
-      end if;
-      if testcycle = 21 then
-        assert acc_res = X"FF800000" report "Bad value 4";
-      end if;
-      if testcycle = 25 then
-        assert acc_res = X"7F800000" report "Bad value 5";
+      if acc_ready = '1' then
+        pending_read(0) <= pending_read(1);
+        pending_read(1) <= acc_op = op_readfloat or acc_op = op_readblock or acc_op = op_readflags;
+      else
+        pending_read(0) <= false;
       end if;
       if acc_ready = '1' or acc_reset = '1' then
         testcycle := testcycle + 1;
