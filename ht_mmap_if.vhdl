@@ -108,6 +108,7 @@ signal p_data : std_logic_vector(63 downto 0);
 
 signal p_cmd_stop : std_logic;
 signal p_data_stop : std_logic;
+signal p_done : unsigned(COUNT_LEN - 1 downto 0);
 
 signal last_np_cmd_avail : std_logic;
 signal last_np_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
@@ -357,7 +358,6 @@ begin
   end process;
 
   process(clock,reset_n)
-  variable p_done : unsigned(COUNT_LEN - 1 downto 0);
   function needs_data(cmd : in std_logic_vector(CMD_LEN - 1 downto 0)) return boolean is
     variable res : boolean;
   begin
@@ -373,18 +373,23 @@ begin
       p_data_stop <= '0';
       np_cmd_stop <= '0';
       np_data_stop <= '0';
-      p_done := (others => '0');
+      p_done <= (others => '0');
       new_cmd <= (others => '0');
       new_cmd_needs_reply <= '0';
       new_tag <= (others => '0');
       new_addr <= (others => '0');
       new_data <= (others => '0');
     elsif rising_edge(clock) then
-      posted_data_complete <= '0';
       if p_cmd_avail = '0' or (cmd_stop = '0' and (not needs_data(p_cmd) or (p_data_avail = '1' and p_done = p_count))) then
         p_cmd_stop <= '0';
+        if needs_data(p_cmd) then
+          posted_data_complete <= p_cmd_avail;
+        else
+          posted_data_complete <= '0';
+        end if;
       else
         p_cmd_stop <= '1';
+        posted_data_complete <= '0';
       end if;
       if p_data_avail = '0' or (cmd_stop = '0' and p_cmd_avail = '1' and needs_data(p_cmd) and (p_done(0) = '1' or p_done = p_count)) then
         p_data_stop <= '0';
@@ -406,12 +411,9 @@ begin
             new_data <= p_data(63 downto 32);
           end if;
           if not needs_data(p_cmd) or p_done = p_count then
-            p_done := (others => '0');
-            if needs_data(p_cmd) then
-              posted_data_complete <= '1';
-            end if;
+            p_done <= (others => '0');
           else
-            p_done := p_done + 1;
+            p_done <= p_done + 1;
           end if;
         elsif np_cmd_avail = '1' and
              (np_data_avail = '1' or not needs_data(np_cmd)) then
