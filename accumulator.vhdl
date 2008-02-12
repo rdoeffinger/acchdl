@@ -58,7 +58,7 @@ architecture behaviour of accumulator is
     return 0;
   end;
 begin
-  exp <= read_pos * BLOCKSIZE + floatshift - (NUMBLOCKS / 2 - 3) * BLOCKSIZE + 9;
+  exp <= read_pos * BLOCKSIZE - floatshift - (NUMBLOCKS / 2 - 4) * BLOCKSIZE + 8;
   ready <= ready_sig;
   ready_sig <= not reset when state = st_ready or state = st_fixcarry or
                               state = st_out_block1 or state = st_in_block or
