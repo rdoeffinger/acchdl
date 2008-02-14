@@ -282,12 +282,12 @@ begin
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= std_logic_vector(to_unsigned(exp, 8));
         bigtmp := std_logic_vector(unsigned(bigtmp) sll floatshift);
---        bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**7);
+        bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**7);
         out_buf(22 downto 0) <= bigtmp(62 downto 40);
       when st_out_float_denormal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= X"00";
---        bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**0);
+        bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**0);
         out_buf(22 downto 0) <= bigtmp(55 downto 33);
       when st_out_float_inf =>
         out_buf(31) <= allvalue(NUMBLOCKS);
@@ -356,6 +356,8 @@ begin
           if data_in(30 downto 23) = X"FF" then
             -- Inf or NaN
             state <= st_in_status;
+          elsif data_in = X"00000000" then
+            state <= st_ready;
           else
             state <= st_in_float0;
           end if;
