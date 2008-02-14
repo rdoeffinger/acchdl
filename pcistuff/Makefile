@@ -13,6 +13,6 @@ sum1: sum1.c libefac.c
 	$(CC) $(CFLAGS) -o $@ $^ -lpci -lz
 
 clean:
-	rm -f pciaccess testefac
+	rm -f pciaccess testefac sum1
 
 .PHONY: all clean
