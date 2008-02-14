@@ -50,6 +50,17 @@ static inline efac_unused void efac_add4(int reg,
   EFAC_BARRIER(regb[16]);
 }
 
+static inline efac_unused void efac_add8(int reg,
+          float val1, float val2, float val3, float val4,
+          float val5, float val6, float val7, float val8) {
+  volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
+  regb[32+0] = val1; regb[32+1] = val2;
+  regb[32+2] = val3; regb[32+3] = val4;
+  regb[32+4] = val5; regb[32+5] = val6;
+  regb[32+6] = val7; regb[32+7] = val8;
+  EFAC_BARRIER(regb[32]);
+}
+
 static inline efac_unused void efac_sub4(int reg,
           float val1, float val2, float val3, float val4) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
