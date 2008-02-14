@@ -128,6 +128,7 @@ signal np_data : std_logic_vector(63 downto 0);
 
 signal np_cmd_stop : std_logic;
 signal np_data_stop : std_logic;
+signal np_done : unsigned(COUNT_LEN - 1 downto 0);
 
 begin
   regs : for I in 0 to NUMREGS-1 generate
@@ -144,7 +145,6 @@ begin
   end generate;
 
   accreset <= not reset_n;
-  nonposted_data_complete <= '0';
   response_cmd_out(7 downto 6) <= "00";
   response_cmd_out(15 downto 13) <= "000";
   response_cmd_out(92 downto 21) <= X"000000000000000000";
@@ -369,35 +369,25 @@ begin
   begin
     if reset_n = '0' then
       posted_data_complete <= '0';
+      nonposted_data_complete <= '0';
       p_cmd_stop <= '0';
       p_data_stop <= '0';
       np_cmd_stop <= '0';
       np_data_stop <= '0';
       p_done <= (others => '0');
+      np_done <= (others => '0');
       new_cmd <= (others => '0');
       new_cmd_needs_reply <= '0';
       new_tag <= (others => '0');
       new_addr <= (others => '0');
       new_data <= (others => '0');
     elsif rising_edge(clock) then
-      if p_cmd_avail = '0' or (cmd_stop = '0' and (not needs_data(p_cmd) or (p_data_avail = '1' and p_done = p_count))) then
-        p_cmd_stop <= '0';
-        if needs_data(p_cmd) then
-          posted_data_complete <= p_cmd_avail;
-        else
-          posted_data_complete <= '0';
-        end if;
-      else
-        p_cmd_stop <= '1';
-        posted_data_complete <= '0';
-      end if;
-      if p_data_avail = '0' or (cmd_stop = '0' and p_cmd_avail = '1' and needs_data(p_cmd) and (p_done(0) = '1' or p_done = p_count)) then
-        p_data_stop <= '0';
-      else
-        p_data_stop <= '1';
-      end if;
+      p_cmd_stop <= p_cmd_avail;
+      p_data_stop <= p_data_avail;
+      posted_data_complete <= '0';
       np_cmd_stop <= np_cmd_avail;
       np_data_stop <= np_data_avail;
+      nonposted_data_complete <= '0';
       if cmd_stop = '0' then
         if p_cmd_avail = '1' and
           (p_data_avail = '1' or not needs_data(p_cmd)) then
@@ -410,7 +400,14 @@ begin
           else
             new_data <= p_data(63 downto 32);
           end if;
+          if needs_data(p_cmd) and p_done = p_count then
+            posted_data_complete <= '1';
+          end if;
+          if needs_data(p_cmd) and (p_done(0) = '1' or p_done = p_count) then
+            p_data_stop <= '0';
+          end if;
           if not needs_data(p_cmd) or p_done = p_count then
+            p_cmd_stop <= '0';
             p_done <= (others => '0');
           else
             p_done <= p_done + 1;
@@ -421,10 +418,22 @@ begin
           new_cmd_needs_reply <= '1';
           new_tag <= np_tag;
           new_addr <= np_addr;
-          new_data <= np_data(31 downto 0);
-          np_cmd_stop <= '0';
-          if needs_data(np_cmd) then
+          if np_done(0) = '0' then
+            new_data <= np_data(31 downto 0);
+          else
+            new_data <= np_data(63 downto 32);
+          end if;
+          if needs_data(np_cmd) and np_done = np_count then
+            nonposted_data_complete <= '1';
+          end if;
+          if needs_data(np_cmd) and (np_done(0) = '1' or np_done = np_count) then
             np_data_stop <= '0';
+          end if;
+          if not needs_data(np_cmd) or np_done = np_count then
+            np_cmd_stop <= '0';
+            np_done <= (others => '0');
+          else
+            np_done <= np_done + 1;
           end if;
         else
           new_cmd <= (others => '0');
