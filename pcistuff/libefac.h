@@ -20,19 +20,19 @@ static inline efac_unused void efac_clear(int reg) {
 static inline efac_unused void efac_add(int reg, float val) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
   regb[efac_idx++] = val;
-  if (!(efac_idx & 8))
+  efac_idx &= 7;
+  if (efac_idx)
     return;
   asm("sfence\n\t":::"memory");
-  efac_idx = 0;
 }
 
 static inline efac_unused void efac_sub(int reg, float val) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
   regb[128 + efac_idx++] = val;
-  if (!(efac_idx & 8))
+  efac_idx &= 7;
+  if (efac_idx)
     return;
   asm("sfence\n\t":::"memory");
-  efac_idx = 0;
 }
 
 static inline efac_unused void efac_add4(int reg,
