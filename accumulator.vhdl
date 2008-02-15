@@ -26,6 +26,9 @@ architecture behaviour of accumulator is
                    st_out_float4, st_out_float5,
                    st_out_float_normal, st_out_float_denormal, st_out_float_inf);
 
+  signal round_nearest : std_logic;
+  signal round_inf : std_logic;
+  signal round_sign : std_logic;
   signal accu : accutype;
   signal allmask : flagtype;
   signal allvalue : flagtype;
@@ -282,12 +285,20 @@ begin
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= std_logic_vector(to_unsigned(exp, 8));
         bigtmp := std_logic_vector(unsigned(bigtmp) sll floatshift);
-        bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**7);
+        if round_nearest = '1' then
+          bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**7);
+        elsif (round_inf xor (round_sign and allvalue(NUMBLOCKS))) = '1' then
+          bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**8);
+        end if;
         out_buf(22 downto 0) <= bigtmp(62 downto 40);
       when st_out_float_denormal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= X"00";
-        bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**0);
+        if round_nearest = '1' then
+          bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**0);
+        elsif (round_inf xor (round_sign and allvalue(NUMBLOCKS))) = '1' then
+          bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**1);
+        end if;
         out_buf(22 downto 0) <= bigtmp(55 downto 33);
       when st_out_float_inf =>
         out_buf(31) <= allvalue(NUMBLOCKS);
@@ -296,6 +307,21 @@ begin
       when others =>
         null;
     end case;
+  end if;
+end process;
+
+get_roundmode : process(clock,reset)
+begin
+  if reset = '1' then
+    round_inf <= '0';
+    round_sign <= '0';
+    round_nearest <= '0';
+  elsif rising_edge(clock) then
+    if ready_sig = '1' then
+      round_inf <= pos(0);
+      round_sign <= pos(1);
+      round_nearest <= pos(2);
+    end if;
   end if;
 end process;
 
