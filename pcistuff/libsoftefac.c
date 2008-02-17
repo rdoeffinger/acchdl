@@ -32,7 +32,7 @@ static uint32_t read(register_t *preg, int pos) {
   return preg->allmask & mask ? val >> 31 : preg->buffer[pos];
 }
 
-static __attribute__((noinline)) int do_add(register_t *preg, int pos, uint32_t v) {
+static int do_add(register_t *preg, int pos, uint32_t v) {
   uint32_t oldval = read(preg, pos);
   uint32_t newval = oldval + v;
   uint32_t mask = 1 << pos;
@@ -80,22 +80,20 @@ static int efac_log2(uint32_t v) {
 }
 
 void efac_add(int reg, float val) {
-  int exp;
+  int exp = 0;
   int pos;
-  int64_t mant;
   uint32_t tmp;
   int carry;
   register_t *preg = &regs[reg];
+  int64_t mant = frexpf(val, &exp) * (1 << 25);
   if (val - val) { // Inf/NaN
     preg->allmask &= ~(-1 << REGSIZE);
     return;
   }
-  val = frexpf(val, &exp);
-  mant = val * (1 << 25);
   if (!mant) return;
   exp += 126;
-  if (exp <= 0) { // denormal
-    mant >>= 1 - exp;
+  if (exp < 0) {
+    mant >>= exp;
     pos = 0;
   } else {
     pos = exp >> 5;
