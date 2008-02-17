@@ -116,6 +116,24 @@ void efac_add(int reg, float val) {
   do_add(reg, pos, sign, carry);
 }
 
+void efac_add4(int reg, float val1, float val2, float val3, float val4) {
+  efac_add(reg, val1);
+  efac_add(reg, val2);
+  efac_add(reg, val3);
+  efac_add(reg, val4);
+}
+
+void efac_sub(int reg, float val) {
+  efac_add(reg, -val);
+}
+
+void efac_sub4(int reg, float val1, float val2, float val3, float val4) {
+  efac_sub(reg, val1);
+  efac_sub(reg, val2);
+  efac_sub(reg, val3);
+  efac_sub(reg, val4);
+}
+
 float efac_read(int reg) {
   int pos;
   float res;
