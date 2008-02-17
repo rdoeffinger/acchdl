@@ -82,7 +82,6 @@ static int efac_log2(uint32_t v) {
 void efac_add(int reg, float val) {
   int exp;
   int pos;
-  int sign;
   int64_t mant;
   uint32_t tmp;
   int carry;
