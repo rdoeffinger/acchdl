@@ -1,6 +1,10 @@
 #include <stdio.h>
+#ifdef SOFT
+#include "libsoftefac.h"
+#else
 #include "libefac.h"
-#define PER_LOOP 8
+#endif
+#define PER_LOOP 1
 int main(void) {
   int i;
   double v1 = 0;
@@ -11,9 +15,9 @@ int main(void) {
   }
   efac_clear(0);
   for (i = 1; i < 100000000; i+=PER_LOOP) {
-//    v1 += 1.0 / i;
-//    v2 += 1.0 / i;
 #if PER_LOOP == 1
+    v1 += 1.0 / i;
+    v2 += 1.0 / i;
     efac_add(0, 1.0 / (i + 0));
 #elif PER_LOOP == 4
     efac_add4(0, 1.0 / (i + 0), 1.0 / (i + 1), 1.0 / (i + 2), 1.0 / (i + 3));
