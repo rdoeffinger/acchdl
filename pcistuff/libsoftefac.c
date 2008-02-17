@@ -9,6 +9,7 @@ typedef struct {
   uint32_t buffer[REGSIZE];
   uint32_t allmask;
   uint32_t allvalue;
+  uint32_t padding[32-REGSIZE-2];
 } register_t;
 
 static register_t regs[REGCNT];
@@ -25,18 +26,24 @@ void efac_clear(int reg) {
   regs[reg].allvalue = 0;
 }
 
-static int do_add(int reg, int pos, int sign, uint32_t v) {
-  uint32_t oldval = regs[reg].buffer[pos];
+static uint32_t read(register_t *preg, int pos) {
+  uint32_t mask = 1 << pos;
+  int32_t val = preg->allvalue << (31 - pos);
+  return preg->allmask & mask ? val >> 31 : preg->buffer[pos];
+}
+
+static __attribute__((noinline)) int do_add(register_t *preg, int pos, uint32_t v) {
+  uint32_t oldval = read(preg, pos);
   uint32_t newval = oldval + v;
   uint32_t mask = 1 << pos;
-  regs[reg].buffer[pos] = newval;
-  if (newval && newval != -1) regs[reg].allmask &= ~mask;
+  preg->buffer[pos] = newval;
+  if (newval && newval != -1) preg->allmask &= ~mask;
   else {
-    regs[reg].allmask |= mask;
-    if (newval) regs[reg].allvalue |= mask;
-    else regs[reg].allvalue &= ~mask;
+    preg->allmask |= mask;
+    if (newval) preg->allvalue |= mask;
+    else preg->allvalue &= ~mask;
   }
-  return sign ? -(newval > oldval) : newval < oldval;
+  return newval < oldval;
 }
 
 static uint8_t log2_8bit[256] = {
@@ -79,14 +86,14 @@ void efac_add(int reg, float val) {
   int64_t mant;
   uint32_t tmp;
   int carry;
-  if (!val) return;
+  register_t *preg = &regs[reg];
   if (val - val) { // Inf/NaN
-    regs[reg].allmask &= ~(1 << REGSIZE);
+    preg->allmask &= ~(-1 << REGSIZE);
     return;
   }
   val = frexpf(val, &exp);
-  sign = val < 0;
   mant = val * (1 << 25);
+  if (!mant) return;
   exp += 126;
   if (exp <= 0) { // denormal
     mant >>= 1 - exp;
@@ -96,24 +103,26 @@ void efac_add(int reg, float val) {
     mant <<= exp & 31;
   }
   pos += REGSIZE/2 - 4;
-  carry = do_add(reg, pos, sign, mant);
+  carry = do_add(preg, pos, mant);
   pos++;
   mant >>= 32;
-  carry = do_add(reg, pos, sign, mant + carry);
-  if (!carry)
+  carry = do_add(preg, pos, mant + carry);
+  if (!carry ^ (mant < 0))
     return;
   pos++;
-  tmp = sign ? regs[reg].allvalue | ~regs[reg].allmask :
-               regs[reg].allvalue &  regs[reg].allmask;
-  regs[reg].allvalue = tmp + (carry << pos);
-  tmp ^= regs[reg].allvalue;
+  carry = mant < 0 ? -1 : 1;
+  tmp = mant < 0 ? preg->allvalue | ~preg->allmask :
+                   preg->allvalue &  preg->allmask;
+  preg->allvalue = tmp + (carry << pos);
+  tmp ^= preg->allvalue;
   pos = efac_log2(tmp);
-  if (pos == REGSIZE) {
-    regs[reg].allmask &= ~(1 << REGSIZE);
+  if (pos >= REGSIZE) {
+    if (pos == REGSIZE)
+      preg->allmask &= ~(-1 << REGSIZE);
     return;
   } else if (!pos)
     return;
-  do_add(reg, pos, sign, carry);
+  do_add(preg, pos, carry);
 }
 
 void efac_add4(int reg, float val1, float val2, float val3, float val4) {
@@ -145,10 +154,10 @@ float efac_read(int reg) {
   pos = efac_log2(tmp);
   if (pos >= REGSIZE)
     return 1.0/0.0;
-  value = regs[reg].buffer[pos];
+  value = read(&regs[reg], pos);
   value <<= 32;
   pos--;
-  if (pos >= 0) value |= regs[reg].buffer[pos];
+  if (pos >= 0) value |= read(&regs[reg], pos);
   pos -= REGSIZE/2 - 4;
   if (sign) value = -value;
   res = ldexpf(value, (pos << 5) - 126 - 25);
