@@ -53,20 +53,21 @@ architecture behaviour of test_accumulator is
   constant pos0 : position_t := "000000000";
   constant pos1 : position_t := "0"&X"01";
   constant pos3 : position_t := "0"&X"03";
+  constant pos_round : position_t := "0"&X"04";
 
   type poss_t is array (0 to NUMTESTS - 1) of position_t;
   constant poss : poss_t := (
-    pos0, pos0, pos0, pos0, pos0,
+    pos0, pos0, pos0, pos0, pos_round,
     pos0,
-    pos0, pos0, pos0, pos0,
+    pos0, pos0, pos0, pos_round,
     pos0,
-    pos0, pos0, pos0, pos0,
+    pos0, pos0, pos0, pos_round,
     pos0,
-    pos0, pos0, pos0, pos0,
+    pos0, pos0, pos0, pos_round,
     pos0,
-    pos0, pos0, pos0,
+    pos0, pos0, pos_round,
     pos0,
-    pos0, pos0,
+    pos0, pos_round,
     pos0,
     pos1, pos1, pos1, pos3, pos0
   );
