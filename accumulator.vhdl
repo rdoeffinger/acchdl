@@ -200,7 +200,7 @@ end process;
 
 execute : process(clock,reset)
   variable addtmp : unsigned(BLOCKSIZE downto 0);
-  variable bigtmp : addblock;
+  variable bigtmp : unsigned(2*BLOCKSIZE  downto 0);
   variable curval : subblock;
 begin
   if reset = '1' then
@@ -268,38 +268,47 @@ begin
         if allvalue(NUMBLOCKS) = '1' then
           curval := not curval;
         end if;
-        bigtmp(BLOCKSIZE-1 downto 0) := curval;
+        bigtmp(BLOCKSIZE-1 downto 0) := unsigned(curval);
       when st_out_float3 =>
         if allvalue(NUMBLOCKS) = '1' then
           curval := not curval;
         end if;
-        bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := curval;
-        if allvalue(NUMBLOCKS) = '1' then
-          bigtmp := std_logic_vector(unsigned(bigtmp) + 1);
-        end if;
+        bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := unsigned(curval);
+        bigtmp(2*BLOCKSIZE) := '0';
       when st_out_float4 =>
-        floatshift <= BLOCKSIZE - 1 - maxbit(bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE));
+        floatshift <= BLOCKSIZE - 1 - maxbit(subblock(bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE)));
       when st_out_float5 =>
         null;
       when st_out_float_normal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
-        out_buf(30 downto 23) <= std_logic_vector(to_unsigned(exp, 8));
-        bigtmp := std_logic_vector(unsigned(bigtmp) sll floatshift);
+        bigtmp := bigtmp sll floatshift;
         if round_nearest = '1' then
-          bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**7);
+          bigtmp(64 downto 39) := bigtmp(64 downto 39) + 1;
         elsif (round_inf xor (round_sign and allvalue(NUMBLOCKS))) = '1' then
-          bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**8);
+          bigtmp(64 downto 40) := bigtmp(64 downto 40) + 1;
         end if;
-        out_buf(22 downto 0) <= bigtmp(62 downto 40);
+        if bigtmp(64) = '1' then
+          -- may result in +-Inf
+          out_buf(30 downto 23) <= std_logic_vector(to_unsigned(exp+1, 8));
+          out_buf(22 downto 0) <= std_logic_vector(bigtmp(63 downto 41));
+        else
+          out_buf(30 downto 23) <= std_logic_vector(to_unsigned(exp, 8));
+          out_buf(22 downto 0) <= std_logic_vector(bigtmp(62 downto 40));
+        end if;
       when st_out_float_denormal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
-        out_buf(30 downto 23) <= X"00";
         if round_nearest = '1' then
-          bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**0);
+          bigtmp(56 downto 32) := bigtmp(56 downto 32) + 1;
         elsif (round_inf xor (round_sign and allvalue(NUMBLOCKS))) = '1' then
-          bigtmp(63 downto 32) := std_logic_vector(unsigned(bigtmp(63 downto 32)) + 2**1);
+          bigtmp(56 downto 33) := bigtmp(56 downto 33) + 1;
         end if;
-        out_buf(22 downto 0) <= bigtmp(55 downto 33);
+        if bigtmp(56) = '1' then
+          -- not a denormal anymore
+          out_buf(30 downto 23) <= X"01";
+        else
+          out_buf(30 downto 23) <= X"00";
+        end if;
+        out_buf(22 downto 0) <= std_logic_vector(bigtmp(55 downto 33));
       when st_out_float_inf =>
         out_buf(31) <= allvalue(NUMBLOCKS);
         out_buf(30 downto 23) <= X"FF";
