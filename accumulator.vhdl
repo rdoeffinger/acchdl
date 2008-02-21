@@ -393,7 +393,7 @@ begin
           if data_in(30 downto 23) = X"FF" then
             -- Inf or NaN
             state <= st_in_status;
-          elsif data_in(BLOCKSIZE-1 downto 0) = X"00000000" then
+          elsif data_in(BLOCKSIZE-2 downto 0) = "000"&X"0000000" then
             state <= st_ready;
           else
             state <= st_in_float0;
