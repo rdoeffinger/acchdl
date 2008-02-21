@@ -111,7 +111,7 @@ static inline efac_unused float efac_read_round_pinf(int reg) {
 
 static inline efac_unused float efac_read_round_nearest(int reg) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
-  EFAC_BARRIER(regb[0]);
+  EFAC_BARRIER(regb[4]);
   return *regb;
 }
 
