@@ -83,8 +83,8 @@ static inline efac_unused float efac_read(int reg) {
   return *regb;
 }
 
-// rounding is unfortunately broken in corner cases
-#if 0
+// NOTE: rounding may have a bias currently due to the internal
+// twos-complement notation
 static inline efac_unused float efac_read_round_zero(int reg) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
   EFAC_BARRIER(regb[0]);
@@ -114,6 +114,5 @@ static inline efac_unused float efac_read_round_nearest(int reg) {
   EFAC_BARRIER(regb[0]);
   return *regb;
 }
-#endif
 
 #endif /* LIBEFAC_H */
