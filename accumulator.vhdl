@@ -278,15 +278,22 @@ begin
       when st_out_float4 =>
         floatshift <= BLOCKSIZE - 1 - maxbit(subblock(bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE)));
       when st_out_float5 =>
-        null;
+        if exp <= 0 then
+          if round_nearest = '1' then
+            bigtmp(56 downto 32) := bigtmp(56 downto 32) + 1;
+          elsif (round_inf xor (round_sign and allvalue(NUMBLOCKS))) = '1' then
+            bigtmp(56 downto 33) := bigtmp(56 downto 33) + 1;
+          end if;
+        else
+          bigtmp := bigtmp sll floatshift;
+          if round_nearest = '1' then
+            bigtmp(64 downto 39) := bigtmp(64 downto 39) + 1;
+          elsif (round_inf xor (round_sign and allvalue(NUMBLOCKS))) = '1' then
+            bigtmp(64 downto 40) := bigtmp(64 downto 40) + 1;
+          end if;
+        end if;
       when st_out_float_normal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
-        bigtmp := bigtmp sll floatshift;
-        if round_nearest = '1' then
-          bigtmp(64 downto 39) := bigtmp(64 downto 39) + 1;
-        elsif (round_inf xor (round_sign and allvalue(NUMBLOCKS))) = '1' then
-          bigtmp(64 downto 40) := bigtmp(64 downto 40) + 1;
-        end if;
         if bigtmp(64) = '1' then
           -- may result in +-Inf
           out_buf(30 downto 23) <= std_logic_vector(to_unsigned(exp+1, 8));
@@ -297,11 +304,6 @@ begin
         end if;
       when st_out_float_denormal =>
         out_buf(31) <= allvalue(NUMBLOCKS);
-        if round_nearest = '1' then
-          bigtmp(56 downto 32) := bigtmp(56 downto 32) + 1;
-        elsif (round_inf xor (round_sign and allvalue(NUMBLOCKS))) = '1' then
-          bigtmp(56 downto 33) := bigtmp(56 downto 33) + 1;
-        end if;
         if bigtmp(56) = '1' then
           -- not a denormal anymore
           out_buf(30 downto 23) <= X"01";
@@ -391,7 +393,7 @@ begin
           if data_in(30 downto 23) = X"FF" then
             -- Inf or NaN
             state <= st_in_status;
-          elsif data_in = X"00000000" then
+          elsif data_in(BLOCKSIZE-1 downto 0) = X"00000000" then
             state <= st_ready;
           else
             state <= st_in_float0;
