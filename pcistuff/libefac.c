@@ -73,6 +73,7 @@ EFAC_ALIGNED(REGSZ, volatile uint8_t, efac_regs[REGCNT * REGSZ]);
 int efac_idx;
 
 int efac_init(void) {
+  int i;
   size_t map_size = 0;
   off_t map_base = 0;
   volatile uint8_t *mapped;
@@ -91,7 +92,9 @@ int efac_init(void) {
     return 0;
   }
   dbgprintf("setting MTRR (check /proc/mtrr if it worked)\n");
-  set_mtrr(map_base, map_size, "write-combining");
+//  set_mtrr(map_base, map_size, "write-combining");
+  for (i = 0; i < REGCNT; i++)
+    efac_clear(i);
   return 1;
 }
 
