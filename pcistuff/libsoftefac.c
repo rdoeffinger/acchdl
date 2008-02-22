@@ -140,8 +140,9 @@ void efac_sub4(int reg, float val1, float val2, float val3, float val4) {
   efac_sub(reg, val4);
 }
 
-float efac_read(int reg) {
+static float efac_read_mode(int reg, int mode) {
   int pos;
+  int setbit;
   float res;
   uint64_t value;
   uint32_t tmp = regs[reg].allvalue;
@@ -152,11 +153,47 @@ float efac_read(int reg) {
   if (pos >= REGSIZE)
     return 1.0/0.0;
   value = read(&regs[reg], pos);
+  setbit = efac_log2(value);
   value <<= 32;
   pos--;
   if (pos >= 0) value |= read(&regs[reg], pos);
   pos -= REGSIZE/2 - 4;
   if (sign) value = -value;
+  if (mode == 2) mode = !!sign;
+  if (mode == 3) mode = !sign;
+  if (mode == 0) {
+    value &= ~((1ULL << (setbit + 8)) - 1);
+  } else if (mode == 1) {
+    value += (1ULL << (setbit + 8));
+    value &= ~((1ULL << (setbit + 8)) - 1);
+  } else {
+    value += (1ULL << (setbit + 7));
+    value &= ~((1ULL << (setbit + 8)) - 1);
+  }
   res = ldexpf(value, (pos << 5) - 126 - 25);
   return sign ? -res : res;
+}
+
+float efac_read(int reg) {
+  return efac_read_mode(reg, 0);
+}
+
+float efac_read_round_zero(int reg) {
+  return efac_read_mode(reg, 0);
+}
+
+float efac_read_round_inf(int reg) {
+  return efac_read_mode(reg, 1);
+}
+
+float efac_read_round_ninf(int reg) {
+  return efac_read_mode(reg, 2);
+}
+
+float efac_read_round_pinf(int reg) {
+  return efac_read_mode(reg, 3);
+}
+
+float efac_read_round_nearest(int reg) {
+  return efac_read_mode(reg, 4);
 }
