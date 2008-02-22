@@ -394,7 +394,7 @@ begin
           new_cmd <= p_cmd;
           new_cmd_needs_reply <= '0';
           new_tag <= (others => '0');
-          new_addr <= p_addr;
+          new_addr <= std_logic_vector(unsigned(p_addr) + p_done);
           if p_done(0) = '0' then
             new_data <= p_data(31 downto 0);
           else
@@ -417,7 +417,7 @@ begin
           new_cmd <= np_cmd;
           new_cmd_needs_reply <= '1';
           new_tag <= np_tag;
-          new_addr <= np_addr;
+          new_addr <= std_logic_vector(unsigned(np_addr) + np_done);
           if np_done(0) = '0' then
             new_data <= np_data(31 downto 0);
           else
