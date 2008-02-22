@@ -80,7 +80,7 @@ static inline efac_unused void efac_sub4(int reg,
 static inline efac_unused float efac_read(int reg) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
   EFAC_BARRIER(regb[0]);
-  return *regb;
+  return regb[0];
 }
 
 // NOTE: rounding may have a bias currently due to the internal
@@ -88,31 +88,31 @@ static inline efac_unused float efac_read(int reg) {
 static inline efac_unused float efac_read_round_zero(int reg) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
   EFAC_BARRIER(regb[0]);
-  return *regb;
+  return regb[0];
 }
 
 static inline efac_unused float efac_read_round_inf(int reg) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
   EFAC_BARRIER(regb[1]);
-  return *regb;
+  return regb[1];
 }
 
 static inline efac_unused float efac_read_round_ninf(int reg) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
   EFAC_BARRIER(regb[2]);
-  return *regb;
+  return regb[2];
 }
 
 static inline efac_unused float efac_read_round_pinf(int reg) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
   EFAC_BARRIER(regb[3]);
-  return *regb;
+  return regb[3];
 }
 
 static inline efac_unused float efac_read_round_nearest(int reg) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
   EFAC_BARRIER(regb[4]);
-  return *regb;
+  return regb[4];
 }
 
 #endif /* LIBEFAC_H */
