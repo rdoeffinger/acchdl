@@ -116,13 +116,19 @@ int efac_init(void) {
 void efac_save(int reg, uint32_t buf[512]) {
   volatile uint32_t *regb = (volatile uint32_t *)&efac_regs[reg * 4096];
   int i;
-  for (i = 0; i < 512; i++)
+  for (i = 0; i < 512; i++) {
+    if (!(i & 7))
+      EFAC_BARRIER(regb[512 + i]);
     buf[i] = regb[512 + i];
+  }
 }
 
 void efac_restore(int reg, const uint32_t buf[512]) {
   volatile uint32_t *regb = (volatile uint32_t *)&efac_regs[reg * 4096];
   int i;
-  for (i = 0; i < 512; i++)
+  for (i = 0; i < 512; i++) {
     regb[512 + i] = buf[i];
+    if (!(i & 7))
+      EFAC_BARRIER(regb[512 + i]);
+  }
 }
