@@ -10,7 +10,9 @@
 #include <pci/pci.h>
 #include "libefac.h"
 
+//! PCI vendor ID for our device
 #define VENDOR 7
+//! PCI device ID for our device
 #define DEVICE 7
 #ifdef DEBUG
 #define dbgprintf(...) printf(__VA_ARGS__);
@@ -18,6 +20,12 @@
 #define dbgprintf(...)
 #endif
 
+/**
+ * Does a pci scan to find our device
+ * \param map_base [out] base address of the PCI memory range of the device
+ * \param map_base [out] size of the PCI memory range of the device
+ * \return 1 if device was found, 0 otherwise
+ */
 static int find_device(off_t *map_base, size_t *map_size) {
   int found = 0;
   struct pci_access *pci_acc = pci_alloc();
@@ -40,7 +48,14 @@ static int find_device(off_t *map_base, size_t *map_size) {
   return found;
 }
 
-static void *map_physical(void * dst, off_t base, size_t size) {
+/**
+ * Map a physical memory address into virtual memory
+ * \param dst virtual address to map to or NULL for any
+ * \param base physical base address to map
+ * \param size size of memory range to map
+ * \return pointer where physical memory was mapped
+ */
+static void *map_physical(void *dst, off_t base, size_t size) {
   void *mapped;
   int flags = MAP_SHARED;
   int memfd = open("/dev/mem", O_RDWR);
