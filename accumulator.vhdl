@@ -34,9 +34,9 @@ architecture behaviour of accumulator is
   signal allvalue : flagtype;
   signal input : addblock;
   signal sig_sign : std_logic;
-  signal next_pos : natural range 0 to NUMBLOCKS-1;
-  signal read_pos : natural range 0 to NUMBLOCKS-1;
-  signal write_pos : natural range 0 to NUMBLOCKS-1;
+  signal next_pos : integer;
+  signal read_pos : integer;
+  signal write_pos : integer;
   signal read_block : subblock;
   signal write_block : subblock;
   signal state : state_t;
@@ -45,6 +45,7 @@ architecture behaviour of accumulator is
   attribute clock_signal : string;
   attribute clock_signal of clock : signal is "yes";
   signal floatshift : natural range 0 to BLOCKSIZE-1;
+  signal limited_read_pos : natural range 0 to NUMBLOCKS;
   signal exp : integer;
   signal shift_cnt : natural range 0 to BLOCKSIZE-1;
   signal ready_sig : std_logic;
@@ -61,7 +62,8 @@ architecture behaviour of accumulator is
     return 0;
   end;
 begin
-  exp <= read_pos * BLOCKSIZE - floatshift - (NUMBLOCKS / 2 - 4) * BLOCKSIZE + 8;
+  limited_read_pos <= read_pos; -- only to speed up exp calculation
+  exp <= limited_read_pos * BLOCKSIZE - floatshift - (NUMBLOCKS / 2 - 4) * BLOCKSIZE + 8;
   ready <= ready_sig;
   ready_sig <= not reset when state = st_ready or state = st_fixcarry or
                               state = st_out_block1 or state = st_in_block or
@@ -75,6 +77,7 @@ find_carry_pos : process(clock,reset)
   variable tmp : flagtype;
   variable tmp2 : flagtype;
   variable cptmp : unsigned(BLOCKBITS - 1 downto 0);
+  variable clamped_pos : natural range 0 to NUMBLOCKS - 1;
 begin
   if reset = '1' then
     carry_pos <= 0;
@@ -82,7 +85,8 @@ begin
   elsif rising_edge(clock) then
     case state is
       when st_add1 =>
-        add := 2**(read_pos + 2);
+        clamped_pos := read_pos;
+        add := 2**(clamped_pos + 2);
         if sig_sign = '0' then
           tmp := allvalue and allmask;
           tmp2 := std_logic_vector(unsigned(tmp) + add);
@@ -103,7 +107,9 @@ begin
 end process;
 
 read : process(clock,reset)
-variable pos : natural range 0 to NUMBLOCKS - 1;
+variable pos : integer;
+variable clamped_pos : natural range 0 to NUMBLOCKS - 1;
+variable from_accu : subblock;
 begin
   if reset = '1' then
     read_block <= (others => '0');
@@ -113,12 +119,22 @@ begin
     else
       pos := next_pos;
     end if;
-    if pos = write_pos then
-      read_block <= write_block;
-    elsif allmask(pos) = '1' then
-      read_block <= (others => allvalue(pos));
+    clamped_pos := pos;
+    from_accu := accu(clamped_pos);
+	 if pos >= 0 and pos < NUMBLOCKS then
+      if clamped_pos = write_pos then
+        read_block <= write_block;
+      elsif allmask(clamped_pos) = '1' then
+        read_block <= (others => allvalue(clamped_pos));
+      else
+        read_block <= from_accu;
+      end if;
     else
-      read_block <= accu(pos);
+      if pos < 0 then
+        read_block <= (others => '0');
+      else
+        read_block <= (others => allvalue(NUMBLOCKS));
+      end if;
     end if;
   end if;
 end process;
@@ -137,11 +153,15 @@ begin
 end process;
 
 write : process(clock,reset)
+variable clamped_pos : natural range 0 to NUMBLOCKS - 1;
 begin
   if reset = '1' then
     null;
   elsif rising_edge(clock) then
-    accu(write_pos) <= write_block;
+    if write_pos >= 0 and write_pos < NUMBLOCKS then
+      clamped_pos := write_pos;
+      accu(clamped_pos) <= write_block;
+    end if;
   end if;
 end process;
 
@@ -163,11 +183,13 @@ begin
       allmask <= (others => '1');
     else
       replicate := (others => write_block(0));
+    if write_pos >= 0 and write_pos < NUMBLOCKS then
       if write_block = replicate then
         allmask(write_pos) <= '1';
       else
         allmask(write_pos) <= '0';
       end if;
+    end if;
     end if;
   end if;
 end process;
@@ -188,7 +210,9 @@ begin
       if state = st_fixcarry and carry(0) = '1' then
         tmp := tmp xor carry_allvalue;
       end if;
+      if write_pos >= 0 and write_pos < NUMBLOCKS then
       tmp(write_pos) := write_block(0);
+      end if;
       if state = st_fixcarry then
         allvalue <= tmp;
       else
