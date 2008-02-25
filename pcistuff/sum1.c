@@ -33,6 +33,7 @@ int main(void) {
     efac_add(0, f);
 #elif PER_LOOP == 4
     efac_add4(0, 1.0 / (i + 0), 1.0 / (i + 1), 1.0 / (i + 2), 1.0 / (i + 3));
+#else
 #error unsupported PER_LOOP value
 #endif
 //  printf("vals: %f %f %f\n", v1, v2, efac_read(0));
