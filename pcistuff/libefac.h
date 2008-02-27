@@ -79,11 +79,11 @@ static inline efac_unused void efac_add(int reg, float val) {
  */
 static inline efac_unused void efac_sub(int reg, float val) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
-  EFAC_WRITE(regb[128 + efac_idx++], val);
+  EFAC_WRITE(regb[64 + efac_idx++], val);
   efac_idx &= 7;
   if (efac_idx)
     return;
-  EFAC_BARRIER(regb[128]);
+  EFAC_BARRIER(regb[64]);
 }
 
 /**
@@ -115,11 +115,11 @@ static inline efac_unused void efac_add4(int reg,
 static inline efac_unused void efac_sub4(int reg,
           float val1, float val2, float val3, float val4) {
   volatile float *regb = (volatile float *)&efac_regs[reg * 4096];
-  regb[128+16+0] = val1;
-  regb[128+16+1] = val2;
-  regb[128+16+2] = val3;
-  regb[128+16+3] = val4;
-  EFAC_BARRIER(regb[128+16]);
+  regb[64+16+0] = val1;
+  regb[64+16+1] = val2;
+  regb[64+16+2] = val3;
+  regb[64+16+3] = val4;
+  EFAC_BARRIER(regb[64+16]);
 }
 
 /**

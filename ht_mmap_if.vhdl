@@ -311,7 +311,7 @@ begin
       if ready(cmd_reg) = '1' then
         data_in(cmd_reg) <= X"00000000"&data;
         pos(cmd_reg) <= not addr(8) & addr(7 downto 0);
-        sign(cmd_reg) <= addr(7);
+        sign(cmd_reg) <= addr(6);
       end if;
     end if;
   end process;
