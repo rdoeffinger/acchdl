@@ -133,8 +133,6 @@ static inline efac_unused float efac_read(int reg) {
   return regb[0];
 }
 
-// NOTE: rounding may have a bias currently due to the internal
-// twos-complement notation
 /**
  * Read the value of a register as float, rounding towards zero
  * \param reg register to read
