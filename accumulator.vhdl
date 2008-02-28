@@ -51,6 +51,7 @@ architecture behaviour of accumulator is
   signal ready_sig : std_logic;
   signal carry_pos : natural range 0 to NUMBLOCKS-1;
   signal carry_allvalue : flagtype;
+  signal exact_pos : natural range 0 to NUMBLOCKS;
   function maxbit(v: subblock) return integer is
     variable i : natural range 1 to BLOCKSIZE-1;
   begin
@@ -103,6 +104,24 @@ begin
       when others =>
         null;
     end case;
+  end if;
+end process;
+
+find_exact_pos : process(clock,reset)
+  variable tmp : flagtype;
+  variable tmp2 : flagtype;
+begin
+  if reset = '1' then
+    exact_pos <= NUMBLOCKS;
+  elsif rising_edge(clock) then
+    tmp := allvalue or not allmask;
+    if tmp = X"000000" then
+      exact_pos <= NUMBLOCKS;
+    else
+      tmp2 := std_logic_vector(unsigned(tmp) - 1);
+      tmp := tmp and not tmp2;
+      exact_pos <= maxbit(X"00"&tmp);
+    end if;
   end if;
 end process;
 
@@ -226,6 +245,7 @@ execute : process(clock,reset)
   variable addtmp : unsigned(BLOCKSIZE downto 0);
   variable bigtmp : unsigned(2*BLOCKSIZE  downto 0);
   variable curval : subblock;
+  variable exact : std_logic;
 begin
   if reset = '1' then
     write_pos <= 0;
@@ -289,34 +309,51 @@ begin
           write_block <= curval;
         end if;
       when st_out_float2 =>
-        if allvalue(NUMBLOCKS) = '1' then
-          curval := not curval;
-        end if;
         bigtmp(BLOCKSIZE-1 downto 0) := unsigned(curval);
-      when st_out_float3 =>
-        if allvalue(NUMBLOCKS) = '1' then
-          curval := not curval;
+        if exact_pos >= read_pos then
+          exact := '1';
+        else
+          exact := '0';
         end if;
+      when st_out_float3 =>
         bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := unsigned(curval);
         bigtmp(2*BLOCKSIZE) := '0';
       when st_out_float4 =>
-        floatshift <= BLOCKSIZE - 1 - maxbit(subblock(bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE)));
+        if allvalue(NUMBLOCKS) = '1' then
+          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(not bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE)));
+        else
+          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE)));
+        end if;
       when st_out_float5 =>
         if exp <= 0 then
-          if round_nearest = '1' then
-            bigtmp(56 downto 32) := bigtmp(56 downto 32) + 1;
-          elsif (round_inf xor (round_sign and allvalue(NUMBLOCKS))) = '1' then
-            bigtmp(56 downto 33) := bigtmp(56 downto 33) + 1;
+          if bigtmp(31 downto 0) /= X"00000000" then
+            exact := '0';
+          else
+            exact := exact and (round_nearest or not bigtmp(32));
+          end if;
+          if allvalue(NUMBLOCKS) = '1' then
+            bigtmp(56 downto 32) := not bigtmp(56 downto 32);
           end if;
         else
           bigtmp := bigtmp sll floatshift;
-          if round_nearest = '1' then
-            bigtmp(64 downto 39) := bigtmp(64 downto 39) + 1;
-          elsif (round_inf xor (round_sign and allvalue(NUMBLOCKS))) = '1' then
-            bigtmp(64 downto 40) := bigtmp(64 downto 40) + 1;
+          if bigtmp(38 downto 0) /= "000"&X"000000000" then
+            exact := '0';
+          else
+            exact := exact and (round_nearest or not bigtmp(39));
+          end if;
+          if allvalue(NUMBLOCKS) = '1' then
+            bigtmp(64 downto 39) := not bigtmp(64 downto 39);
           end if;
         end if;
       when st_out_float_normal =>
+        if round_nearest = '1' then
+          if exact = '0' or bigtmp(40) = '1' then
+            bigtmp(64 downto 39) := bigtmp(64 downto 39) + 1;
+          end if;
+        elsif ((    exact and allvalue(NUMBLOCKS)) or
+               (not exact and (round_inf xor (round_sign and allvalue(NUMBLOCKS))))) = '1' then
+          bigtmp(64 downto 40) := bigtmp(64 downto 40) + 1;
+        end if;
         out_buf(31) <= allvalue(NUMBLOCKS);
         if bigtmp(64) = '1' then
           -- may result in +-Inf
@@ -327,6 +364,14 @@ begin
           out_buf(22 downto 0) <= std_logic_vector(bigtmp(62 downto 40));
         end if;
       when st_out_float_denormal =>
+        if round_nearest = '1' then
+          if exact = '0' or bigtmp(33) = '1' then
+            bigtmp(56 downto 32) := bigtmp(56 downto 32) + 1;
+          end if;
+        elsif ((    exact and allvalue(NUMBLOCKS)) or
+               (not exact and (round_inf xor (round_sign and allvalue(NUMBLOCKS))))) = '1' then
+          bigtmp(56 downto 33) := bigtmp(56 downto 33) + 1;
+        end if;
         out_buf(31) <= allvalue(NUMBLOCKS);
         if bigtmp(56) = '1' then
           -- not a denormal anymore
