@@ -130,6 +130,22 @@ signal np_cmd_stop : std_logic;
 signal np_data_stop : std_logic;
 signal np_done : unsigned(COUNT_LEN - 1 downto 0);
 
+  function needs_data(cmd : in std_logic_vector(CMD_LEN - 1 downto 0)) return boolean is
+    variable res : boolean;
+  begin
+    res := cmd(4 downto 3) = "01"; -- write request
+    res := res or cmd = "110000"; -- read response
+    res := res or cmd = "111101"; -- atomic read-modify-write
+    return res;
+  end;
+  function respond_data(cmd : in std_logic_vector(CMD_LEN - 1 downto 0)) return boolean is
+    variable res : boolean;
+  begin
+    res := cmd(5 downto 4) = "01"; -- read request
+    res := res or cmd = "111101"; -- atomic read-modify-write
+    return res;
+  end;
+
 begin
   regs : for I in 0 to NUMREGS-1 generate
   reg0 : accumulator port map (
@@ -218,7 +234,7 @@ begin
       response_data_put <= '0';
     elsif rising_edge(clock) then
       if state = START then
-        if cmd(5 downto 4) = "01" then
+        if respond_data(cmd) then
           response_cmd_out_cmd <= "110000"; -- read response
           response_cmd_out_format <= "011"; -- 32 bit, data attached
           put_data := '1';
@@ -246,7 +262,9 @@ begin
     if reset_n = '0' then
       state <= START;
     elsif rising_edge(clock) then
-      if state = START and cmd_needs_reply = '1' and ready(cmd_reg) = '1' then
+      if state = START and cmd_needs_reply = '1' and not respond_data(cmd) then
+        state <= READ_WAIT4;
+      elsif state = START and cmd_needs_reply = '1' and ready(cmd_reg) = '1' then
         state <= READ_WAIT;
       elsif state = READ_WAIT and ready(read_reg) = '1' then
         state <= READ_WAIT2;
@@ -358,14 +376,6 @@ begin
   end process;
 
   process(clock,reset_n)
-  function needs_data(cmd : in std_logic_vector(CMD_LEN - 1 downto 0)) return boolean is
-    variable res : boolean;
-  begin
-    res := cmd(4 downto 3) = "01"; -- write request
-    res := res or cmd = "110000"; -- read response
-    res := res or cmd = "111101"; -- atomic read-modify-write
-    return res;
-  end;
   begin
     if reset_n = '0' then
       posted_data_complete <= '0';
