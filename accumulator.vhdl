@@ -34,8 +34,8 @@ architecture behaviour of accumulator is
   signal allvalue : flagtype;
   signal input : addblock;
   signal sig_sign : std_logic;
-  signal next_pos : integer;
-  signal read_pos : integer;
+  signal next_pos : integer := 0;
+  signal read_pos : integer := 0;
   signal write_pos : integer;
   signal read_block : subblock;
   signal write_block : subblock;
