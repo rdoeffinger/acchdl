@@ -65,12 +65,12 @@ architecture behaviour of accumulator is
 begin
   limited_read_pos <= read_pos; -- only to speed up exp calculation
   exp <= limited_read_pos * BLOCKSIZE - floatshift - (NUMBLOCKS / 2 - 4) * BLOCKSIZE + 8;
-  ready <= ready_sig;
-  ready_sig <= not reset when state = st_ready or state = st_fixcarry or
-                              state = st_out_block1 or state = st_in_block or
-                              state = st_out_status or state = st_in_status or
-                              state = st_out_float_normal or state = st_out_float_denormal or state = st_out_float_inf
-                         else '0';
+  ready <= ready_sig and not reset;
+  ready_sig <= '1' when state = st_ready or state = st_fixcarry or
+                        state = st_out_block1 or state = st_in_block or
+                        state = st_out_status or state = st_in_status or
+                        state = st_out_float_normal or state = st_out_float_denormal or state = st_out_float_inf
+                   else '0';
   data_out <= out_buf;
 
 find_carry_pos : process(clock,reset)
@@ -277,19 +277,11 @@ begin
         if input(18) = '1' and input(2) = '1' then
           write_block <= (others => '0');
         end if;
-      when st_add1 =>
+      when st_add0 | st_in_float0 =>
+        carry(0) <= '0';
+      when st_add1 | st_add2 =>
         write_pos <= read_pos;
         addtmp := "0"&unsigned(input(BLOCKSIZE-1 downto 0));
-        if sig_sign = '0' then
-          addtmp := unsigned(curval) + addtmp;
-        else
-          addtmp := unsigned(curval) - addtmp;
-        end if;
-        carry(0) <= addtmp(BLOCKSIZE);
-        write_block <= subblock(addtmp(BLOCKSIZE-1 downto 0));
-      when st_add2 =>
-        write_pos <= read_pos;
-        addtmp := "0"&unsigned(input(2*BLOCKSIZE-1 downto BLOCKSIZE));
         if sig_sign = '0' then
           addtmp := unsigned(curval) + addtmp + carry;
         else
@@ -538,6 +530,8 @@ begin
     case state is
       when st_in_float0 =>
         input <= addblock(unsigned(input) sll shift_cnt);
+      when st_add1 =>
+        input(BLOCKSIZE-1 downto 0) <= input(2*BLOCKSIZE-1 downto BLOCKSIZE);
       when others =>
         null;
     end case;
