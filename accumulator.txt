@@ -1,3 +1,25 @@
+Interface of the Accumulator VHDL Entity
+Basic input signals:
+    clock: sensitive to rising edge.
+    reset: set to 1 for an (asynchronous) reset.
+
+Control input signals:
+    sign: set to 1 for subtraction instead of addition (flip sign).
+    op: operation to execute. Use one of the op_ constants.
+    data_in: data to operate on.
+    pos: block position as signed value needed for some operations.
+
+Output signals:
+    ready: if 1 indicates that the operation given by the control input signals
+        is now being processed and the control input signals should be set to
+        the right values for the next operation.
+        Use op_nop if you do not have any next operation to execute (yet).
+        The input signals may be changed at any time, not only when ready
+        is 1, any value when ready was not 1 will be ignored.
+    data_out: result data after any read operation. This will be valid the
+        cycle after the ready signal becomes 1 to indicate the start of
+        processing for the operation following the read.
+
 Operations of the Accumulator VHDL Entity
 
 op_nop: no operation
@@ -91,3 +113,5 @@ Reducing the number of clock cycles is difficult for several reasons:
    that are changed only become known for certain in step 12, though for the
    general case a worst-case guess based on the pre-calculated value for step
    12) may be good enough.
+
+Steps of the op_readfloat Operation
