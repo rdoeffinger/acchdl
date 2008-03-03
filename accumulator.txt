@@ -115,3 +115,30 @@ Reducing the number of clock cycles is difficult for several reasons:
    12) may be good enough.
 
 Steps of the op_readfloat Operation
+
+ 1) Determine block number of highest set bit (highest bit not equal to sign),
+    or the number of the block containing the lowest bit representable by a
+    denormal if this is higher.
+ 2) read block determined in step 1 and the one below.
+ 3) determine position of first set/unset bit in read block.
+ 4) calculate exponent value with information from step 1) and 3).
+ 5) use value from step 3) to shift the blocks read in 2) so that the highest
+    bit unequal to the sign is "leftmost".
+ 6) determine which is the lowest block that is not all 0.
+ 7) use results of steps 5) and 6) to check if the value can be represented
+    exactly as float (special case for denormals, needs exponent from step 4).
+ 8) for negative values now invert the value from 5) (together with rounding
+    converts two's complement to absolute value for mantissa).
+ 9) apply rounding if necessary (needs result from step 7 to avoid bias).
+10) adjust exponent for possible carry due to rounding.
+11) use sign, exponent from 10) and mantissa from 9) to build the float value.
+    Needs special-case for denormals and infinities.
+
+These steps are organized into clock cycles as follows:
+Clock 1: wait, since this could overlap with write-back from previous operation
+Clock 2: 1)
+Clock 3: 2), 6)
+Clock 4: 2)
+Clock 5: 3)
+Clock 6: 4), 5), 7), 8)
+Clock 7: 9), 10), 11)
