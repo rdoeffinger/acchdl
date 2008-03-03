@@ -66,11 +66,6 @@ begin
   limited_read_pos <= read_pos; -- only to speed up exp calculation
   exp <= limited_read_pos * BLOCKSIZE - floatshift - (NUMBLOCKS / 2 - 4) * BLOCKSIZE + 8;
   ready <= ready_sig and not reset;
-  ready_sig <= '1' when state = st_ready or state = st_fixcarry or
-                        state = st_out_block1 or state = st_in_block or
-                        state = st_out_status or state = st_in_status or
-                        state = st_out_float_normal or state = st_out_float_denormal or state = st_out_float_inf
-                   else '0';
   data_out <= out_buf;
 
 find_carry_pos : process(clock,reset)
@@ -432,68 +427,79 @@ begin
 end process;
 
 state_handling : process(clock,reset)
+  variable next_state : state_t;
 begin
   if reset = '1' then
     state <= st_ready;
+    ready_sig <= '1';
   elsif rising_edge(clock) then
     if ready_sig = '1' then
       case op is
         when op_add =>
-          state <= st_add0;
+          next_state := st_add0;
         when op_readblock =>
-          state <= st_out_block0;
+          next_state := st_out_block0;
         when op_writeblock =>
-          state <= st_in_block;
+          next_state := st_in_block;
         when op_readflags =>
-          state <= st_out_status;
+          next_state := st_out_status;
         when op_writeflags =>
-          state <= st_in_status;
+          next_state := st_in_status;
         when op_readfloat =>
-          state <= st_out_float0;
+          next_state := st_out_float0;
         when op_floatadd =>
           if data_in(30 downto 23) = X"FF" then
             -- Inf or NaN
-            state <= st_in_status;
+            next_state := st_in_status;
           elsif data_in(BLOCKSIZE-2 downto 0) = "000"&X"0000000" then
-            state <= st_ready;
+            next_state := st_ready;
           else
-            state <= st_in_float0;
+            next_state := st_in_float0;
           end if;
         when others =>
-          state <= st_ready;
+          next_state := st_ready;
       end case;
     else
     case state is
       when st_add0 | st_in_float0 =>
-        state <= st_add1;
+        next_state := st_add1;
       when st_add1 =>
-        state <= st_add2;
+        next_state := st_add2;
       when st_add2 =>
-        state <= st_fixcarry;
+        next_state := st_fixcarry;
       when st_out_float0 =>
-        state <= st_out_float1;
+        next_state := st_out_float1;
       when st_out_float1 =>
-        state <= st_out_float2;
+        next_state := st_out_float2;
       when st_out_float2 =>
-        state <= st_out_float3;
+        next_state := st_out_float3;
       when st_out_float3 =>
-        state <= st_out_float4;
+        next_state := st_out_float4;
       when st_out_float4 =>
-        state <= st_out_float5;
+        next_state := st_out_float5;
       when st_out_float5 =>
         if exp >= 255 or allmask(NUMBLOCKS) = '0' then
-          state <= st_out_float_inf;
+          next_state := st_out_float_inf;
         elsif exp <= 0 then
-          state <= st_out_float_denormal;
+          next_state := st_out_float_denormal;
         else
-          state <= st_out_float_normal;
+          next_state := st_out_float_normal;
         end if;
       when st_out_block0 =>
-        state <= st_out_block1;
+        next_state := st_out_block1;
       when others =>
-        state <= st_ready;
+        next_state := st_ready;
     end case;
     end if;
+    if next_state = st_ready            or next_state = st_fixcarry  or
+       next_state = st_out_block1       or next_state = st_in_block  or
+       next_state = st_out_status       or next_state = st_in_status or
+       next_state = st_out_float_normal or next_state = st_out_float_denormal or next_state = st_out_float_inf then
+	   ready_sig <= '1';
+	 else
+	   ready_sig <= '0';
+    end if;
+    state <= next_state;
   end if;
 end process;
 
