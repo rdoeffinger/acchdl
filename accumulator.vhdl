@@ -241,12 +241,16 @@ execute : process(clock,reset)
   variable bigtmp : unsigned(2*BLOCKSIZE  downto 0);
   variable curval : subblock;
   variable exact : std_logic;
+  variable small_read_pos : natural range 0 to NUMBLOCKS - 1;
+  variable small_write_pos : natural range 0 to NUMBLOCKS - 1;
 begin
   if reset = '1' then
     write_pos <= 0;
     write_block <= (others => '0');
   elsif rising_edge(clock) then
-    if read_pos = write_pos then
+    small_read_pos := read_pos;
+    small_write_pos := write_pos;
+    if small_read_pos = small_write_pos then
       curval := write_block;
     else
       curval := read_block;
