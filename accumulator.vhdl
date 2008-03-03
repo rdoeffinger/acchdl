@@ -23,7 +23,7 @@ architecture behaviour of accumulator is
                    st_out_block0, st_out_block1,
                    st_in_block, st_out_status, st_in_status,
                    st_out_float0, st_out_float1, st_out_float2, st_out_float3,
-                   st_out_float4, st_out_float5,
+                   st_out_float4,
                    st_out_float_normal, st_out_float_denormal, st_out_float_inf);
 
   signal round_nearest : std_logic;
@@ -305,13 +305,12 @@ begin
       when st_out_float3 =>
         bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := unsigned(curval);
         bigtmp(2*BLOCKSIZE) := '0';
-      when st_out_float4 =>
         if allvalue(NUMBLOCKS) = '1' then
-          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(not bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE)));
+          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(not curval));
         else
-          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE)));
+          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(curval));
         end if;
-      when st_out_float5 =>
+      when st_out_float4 =>
         if exp <= 0 then
           if bigtmp(31 downto 0) /= X"00000000" then
             exact := '0';
@@ -476,8 +475,6 @@ begin
       when st_out_float3 =>
         next_state := st_out_float4;
       when st_out_float4 =>
-        next_state := st_out_float5;
-      when st_out_float5 =>
         if exp >= 255 or allmask(NUMBLOCKS) = '0' then
           next_state := st_out_float_inf;
         elsif exp <= 0 then
