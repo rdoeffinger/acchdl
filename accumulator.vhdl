@@ -73,7 +73,7 @@ find_carry_pos : process(clock,reset)
   variable tmp : flagtype;
   variable tmp2 : flagtype;
   variable cptmp : unsigned(BLOCKBITS - 1 downto 0);
-  variable clamped_pos : natural range 0 to NUMBLOCKS - 1;
+  variable small_pos : natural range 0 to NUMBLOCKS - 1;
 begin
   if reset = '1' then
     carry_pos <= 0;
@@ -81,8 +81,8 @@ begin
   elsif rising_edge(clock) then
     case state is
       when st_add1 =>
-        clamped_pos := read_pos;
-        add := 2**(clamped_pos + 2);
+        small_pos := read_pos;
+        add := 2**(small_pos + 2);
         if sig_sign = '0' then
           tmp := allvalue and allmask;
           tmp2 := std_logic_vector(unsigned(tmp) + add);
@@ -122,7 +122,7 @@ end process;
 
 read : process(clock,reset)
 variable pos : integer;
-variable clamped_pos : natural range 0 to NUMBLOCKS - 1;
+variable small_pos : natural range 0 to NUMBLOCKS - 1;
 variable from_accu : subblock;
 begin
   if reset = '1' then
@@ -133,13 +133,13 @@ begin
     else
       pos := next_pos;
     end if;
-    clamped_pos := pos;
-    from_accu := accu(clamped_pos);
+    small_pos := pos;
+    from_accu := accu(small_pos);
 	 if pos >= 0 and pos < NUMBLOCKS then
-      if clamped_pos = write_pos then
+      if small_pos = write_pos then
         read_block <= write_block;
-      elsif allmask(clamped_pos) = '1' then
-        read_block <= (others => allvalue(clamped_pos));
+      elsif allmask(small_pos) = '1' then
+        read_block <= (others => allvalue(small_pos));
       else
         read_block <= from_accu;
       end if;
@@ -167,14 +167,14 @@ begin
 end process;
 
 write : process(clock,reset)
-variable clamped_pos : natural range 0 to NUMBLOCKS - 1;
+variable small_pos : natural range 0 to NUMBLOCKS - 1;
 begin
   if reset = '1' then
     null;
   elsif rising_edge(clock) then
     if write_pos >= 0 and write_pos < NUMBLOCKS then
-      clamped_pos := write_pos;
-      accu(clamped_pos) <= write_block;
+      small_pos := write_pos;
+      accu(small_pos) <= write_block;
     end if;
   end if;
 end process;
