@@ -102,6 +102,36 @@ static inline efac_unused void efac_clear(int reg) {
 }
 
 /**
+ * Set exponent offsets for float operations
+ * \param reg register to modify
+ * \param read_offset offset to add to exponents when reading
+ * \param write_offset offset to add to exponents when writing
+ */
+static inline efac_unused void efac_set_offsets(int reg,
+        int16_t read_offset, int16_t write_offset) {
+  volatile uint32_t *regb = (volatile uint32_t *)&efac_regs[reg * 4096];
+  uint32_t v = read_offset << 16 | (uint16_t)write_offset;
+  EFAC_WRITE(regb[513], v);
+  EFAC_BARRIER(regb[513]);
+}
+
+/**
+ * Get exponent offsets for float operations
+ * \param reg register to read
+ * \param read_offset [out] offset added to exponents when reading
+ * \param write_offset [out] offset added to exponents when writing
+ */
+static inline efac_unused void efac_get_offsets(int reg,
+        int16_t *read_offset, int16_t *write_offset) {
+  volatile uint32_t *regb = (volatile uint32_t *)&efac_regs[reg * 4096];
+  uint32_t v;
+  EFAC_BARRIER(regb[513]);
+  v = regb[513];
+  *write_offset = v;
+  *read_offset = v >> 16;
+}
+
+/**
  * Add a float value to a register
  * \param reg register to add to
  * \param val value to add

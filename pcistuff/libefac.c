@@ -108,8 +108,10 @@ int efac_init(void) {
   }
   dbgprintf("setting MTRR (check /proc/mtrr if it worked)\n");
 //  set_mtrr(map_base, map_size, "write-combining");
-  for (i = 0; i < REGCNT; i++)
+  for (i = 0; i < REGCNT; i++) {
     efac_clear(i);
+    efac_set_offsets(i, 0, 0);
+  }
   return 1;
 }
 
