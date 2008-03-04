@@ -239,25 +239,15 @@ end process;
 execute : process(clock,reset)
   variable addtmp : unsigned(BLOCKSIZE downto 0);
   variable bigtmp : unsigned(2*BLOCKSIZE  downto 0);
-  variable curval : subblock;
   variable exact : std_logic;
-  variable small_read_pos : natural range 0 to NUMBLOCKS - 1;
-  variable small_write_pos : natural range 0 to NUMBLOCKS - 1;
 begin
   if reset = '1' then
     write_pos <= 0;
     write_block <= (others => '0');
   elsif rising_edge(clock) then
-    small_read_pos := read_pos;
-    small_write_pos := write_pos;
-    if small_read_pos = small_write_pos then
-      curval := write_block;
-    else
-      curval := read_block;
-    end if;
     case state is
       when st_out_block1 =>
-        out_buf <= curval;
+        out_buf <= read_block;
       when st_in_block =>
         write_pos <= next_pos;
         write_block <= input(BLOCKSIZE-1 downto 0);
@@ -282,9 +272,9 @@ begin
         write_pos <= read_pos;
         addtmp := "0"&unsigned(input(BLOCKSIZE-1 downto 0));
         if sig_sign = '0' then
-          addtmp := unsigned(curval) + addtmp + carry;
+          addtmp := unsigned(read_block) + addtmp + carry;
         else
-          addtmp := unsigned(curval) - addtmp - carry;
+          addtmp := unsigned(read_block) - addtmp - carry;
         end if;
         carry(0) <= addtmp(BLOCKSIZE);
         write_block <= subblock(addtmp(BLOCKSIZE-1 downto 0));
@@ -292,27 +282,27 @@ begin
         write_pos <= read_pos;
         if carry(0) = '1' and read_pos /= 0 then -- 0 means overflow
           if sig_sign = '0' then
-            write_block <= subblock(unsigned(curval) + carry);
+            write_block <= subblock(unsigned(read_block) + carry);
           else
-            write_block <= subblock(unsigned(curval) - carry);
+            write_block <= subblock(unsigned(read_block) - carry);
           end if;
         else
-          write_block <= curval;
+          write_block <= read_block;
         end if;
       when st_out_float2 =>
-        bigtmp(BLOCKSIZE-1 downto 0) := unsigned(curval);
+        bigtmp(BLOCKSIZE-1 downto 0) := unsigned(read_block);
         if exact_pos >= read_pos then
           exact := '1';
         else
           exact := '0';
         end if;
       when st_out_float3 =>
-        bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := unsigned(curval);
+        bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := unsigned(read_block);
         bigtmp(2*BLOCKSIZE) := '0';
         if allvalue(NUMBLOCKS) = '1' then
-          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(not curval));
+          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(not read_block));
         else
-          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(curval));
+          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(read_block));
         end if;
       when st_out_float4 =>
         if exp <= 0 then
