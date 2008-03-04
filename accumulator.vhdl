@@ -135,7 +135,7 @@ begin
     end if;
     small_pos := pos;
     from_accu := accu(small_pos);
-	 if pos >= 0 and pos < NUMBLOCKS then
+    if pos >= 0 and pos < NUMBLOCKS then
       if small_pos = write_pos then
         read_block <= write_block;
       elsif allmask(small_pos) = '1' then
@@ -496,9 +496,9 @@ begin
        next_state = st_out_block1       or next_state = st_in_block  or
        next_state = st_out_status       or next_state = st_in_status or
        next_state = st_out_float_normal or next_state = st_out_float_denormal or next_state = st_out_float_inf then
-	   ready_sig <= '1';
-	 else
-	   ready_sig <= '0';
+      ready_sig <= '1';
+    else
+      ready_sig <= '0';
     end if;
     state <= next_state;
   end if;
