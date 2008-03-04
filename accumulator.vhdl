@@ -21,7 +21,7 @@ end accumulator;
 architecture behaviour of accumulator is
   type state_t is (st_ready, st_in_float0, st_add0, st_add1, st_add2, st_fixcarry,
                    st_out_block0, st_out_block1,
-                   st_in_block, st_out_status, st_in_status,
+                   st_in_block, st_out_status, st_in_status, st_out_ofs, st_in_ofs,
                    st_out_float0, st_out_float1, st_out_float2, st_out_float3,
                    st_out_float4,
                    st_out_float_normal, st_out_float_denormal, st_out_float_inf);
@@ -47,6 +47,8 @@ architecture behaviour of accumulator is
   signal floatshift : natural range 0 to BLOCKSIZE-1;
   signal limited_read_pos : natural range 0 to NUMBLOCKS;
   signal exp : integer;
+  signal read_offset : integer range -32768 to 32767;
+  signal write_offset : integer range -32768 to 32767;
   signal shift_cnt : natural range 0 to BLOCKSIZE-1;
   signal ready_sig : std_logic;
   signal carry_pos : natural range 0 to NUMBLOCKS-1;
@@ -64,7 +66,6 @@ architecture behaviour of accumulator is
   end;
 begin
   limited_read_pos <= read_pos; -- only to speed up exp calculation
-  exp <= limited_read_pos * BLOCKSIZE - floatshift - (NUMBLOCKS / 2 - 4) * BLOCKSIZE + 8;
   ready <= ready_sig and not reset;
   data_out <= out_buf;
 
@@ -239,6 +240,7 @@ end process;
 execute : process(clock,reset)
   variable addtmp : unsigned(BLOCKSIZE downto 0);
   variable bigtmp : unsigned(2*BLOCKSIZE  downto 0);
+  variable shifttmp : natural range 0 to BLOCKSIZE - 1;
   variable exact : std_logic;
 begin
   if reset = '1' then
@@ -266,6 +268,12 @@ begin
         if input(18) = '1' and input(2) = '1' then
           write_block <= (others => '0');
         end if;
+      when st_out_ofs =>
+        out_buf(15 downto  0) <= std_logic_vector(to_signed(write_offset, 16));
+        out_buf(31 downto 16) <= std_logic_vector(to_signed(read_offset , 16));
+      when st_in_ofs =>
+        write_offset <= to_integer(signed(data_in(15 downto  0)));
+        read_offset  <= to_integer(signed(data_in(31 downto 16)));
       when st_add0 | st_in_float0 =>
         carry(0) <= '0';
       when st_add1 | st_add2 =>
@@ -300,10 +308,12 @@ begin
         bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := unsigned(read_block);
         bigtmp(2*BLOCKSIZE) := '0';
         if allvalue(NUMBLOCKS) = '1' then
-          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(not read_block));
+          shifttmp := BLOCKSIZE - 1 - maxbit(subblock(not read_block));
         else
-          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(read_block));
+          shifttmp := BLOCKSIZE - 1 - maxbit(subblock(read_block));
         end if;
+        floatshift <= shifttmp;
+        exp <= (limited_read_pos * BLOCKSIZE - (NUMBLOCKS / 2 - 4) * BLOCKSIZE + 8 + read_offset) - shifttmp;
       when st_out_float4 =>
         if exp <= 0 then
           if bigtmp(31 downto 0) /= X"00000000" then
@@ -396,7 +406,7 @@ begin
         when op_add | op_readblock | op_writeblock =>
           next_pos <= to_integer(signed(pos)) + NUMBLOCKS / 2;
         when op_floatadd =>
-          next_pos <= to_integer(unsigned(data_in(30 downto 28))) + (NUMBLOCKS / 2 - 4);
+          next_pos <= to_integer(unsigned(data_in(30 downto 28))) + (NUMBLOCKS / 2 - 4) + (write_offset / BLOCKSIZE);
         when others =>
           next_pos <= 0;
       end case;
@@ -438,6 +448,10 @@ begin
           next_state := st_out_status;
         when op_writeflags =>
           next_state := st_in_status;
+        when op_readoffsets =>
+          next_state := st_out_ofs;
+        when op_writeoffsets =>
+          next_state := st_in_ofs;
         when op_readfloat =>
           next_state := st_out_float0;
         when op_floatadd =>
@@ -485,6 +499,7 @@ begin
     if next_state = st_ready            or next_state = st_fixcarry  or
        next_state = st_out_block1       or next_state = st_in_block  or
        next_state = st_out_status       or next_state = st_in_status or
+       next_state = st_out_ofs          or next_state = st_in_ofs    or
        next_state = st_out_float_normal or next_state = st_out_float_denormal or next_state = st_out_float_inf then
       ready_sig <= '1';
     else
@@ -505,7 +520,7 @@ begin
       if op = op_add and sign = '1' then
         input <= addblock(unsigned(not data_in) + 1);
       elsif op = op_floatadd then
-        shift_cnt <= to_integer(unsigned(data_in(27 downto 23)));
+        shift_cnt <= (to_integer(unsigned(data_in(27 downto 23))) + write_offset) mod BLOCKSIZE;
         if data_in(30 downto 23) = X"00" then
           input <= X"0000000000"&data_in(22 downto 0)&"0"; -- denormalized value
         elsif data_in(30 downto 23) = X"FF" then

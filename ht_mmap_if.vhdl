@@ -348,6 +348,8 @@ begin
               if addr(9) = '1' then
                 if addr(8 downto 0) = "000000000" then
                   op(regnum) <= op_writeflags;
+                elsif addr(8 downto 0) = "000000001" then
+                  op(regnum) <= op_writeoffsets;
                 else
                   op(regnum) <= op_writeblock;
                 end if;
@@ -358,6 +360,8 @@ begin
               if addr(9) = '1' then
                 if addr(8 downto 0) = "000000000" then
                   op(regnum) <= op_readflags;
+                elsif addr(8 downto 0) = "000000001" then
+                  op(regnum) <= op_readoffsets;
                 else
                   op(regnum) <= op_readblock;
                 end if;
