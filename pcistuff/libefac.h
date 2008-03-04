@@ -49,6 +49,49 @@ void efac_save(int reg, uint32_t buf[512]);
 void efac_restore(int reg, const uint32_t buf[512]);
 
 /**
+ * Check if register value is negative
+ * \param reg register to check
+ * \return 1 if negative, 0 otherwise
+ */
+static inline efac_unused int efac_is_negative(int reg) {
+  volatile uint32_t *regb = (volatile uint32_t *)&efac_regs[reg * 4096];
+  EFAC_BARRIER(regb[512]);
+  return !!(regb[512] & 1);
+}
+
+/**
+ * Check if register has overflow flag set
+ * \param reg register to check
+ * \return 1 if overflow, 0 otherwise
+ */
+static inline efac_unused int efac_is_overflow(int reg) {
+  volatile uint32_t *regb = (volatile uint32_t *)&efac_regs[reg * 4096];
+  EFAC_BARRIER(regb[512]);
+  return !!(regb[512] & 2);
+}
+
+/**
+ * Check if register value is zero
+ * \param reg register to check
+ * \return 1 if zero, 0 otherwise
+ */
+static inline efac_unused int efac_is_zero(int reg) {
+  volatile uint32_t *regb = (volatile uint32_t *)&efac_regs[reg * 4096];
+  EFAC_BARRIER(regb[512]);
+  return !!(regb[512] & 4);
+}
+
+/**
+ * Clear overflow flag from register
+ * \param reg register to change
+ */
+static inline efac_unused void efac_clear_overflow(int reg) {
+  volatile uint32_t *regb = (volatile uint32_t *)&efac_regs[reg * 4096];
+  EFAC_WRITE(regb[512], 0x00020000);
+  EFAC_BARRIER(regb[512]);
+}
+
+/**
  * Clear a register (set to zero, unset overflow, ...)
  * \param reg register to clear
  */
