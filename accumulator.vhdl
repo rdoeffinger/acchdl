@@ -237,24 +237,87 @@ begin
   end if;
 end process;
 
-execute : process(clock,reset)
+set_offsets : process(clock,reset)
+begin
+  if reset = '1' then
+    read_offset <= 0;
+    write_offset <= 0;
+  elsif rising_edge(clock) then
+    if state = st_in_ofs then
+      write_offset <= to_integer(signed(data_in(15 downto  0)));
+      read_offset  <= to_integer(signed(data_in(31 downto 16)));
+    end if;
+  end if;
+end process;
+
+set_write_pos : process(clock,reset)
+begin
+  if reset = '1' then
+    write_pos <= 0;
+  elsif rising_edge(clock) then
+    case state is
+      when st_in_block =>
+        write_pos <= next_pos;
+      when st_add1 | st_add2 | st_fixcarry =>
+        write_pos <= read_pos;
+      when others =>
+        null;
+    end case;
+  end if;
+end process;
+
+set_write_block_carry : process(clock,reset)
   variable addtmp : unsigned(BLOCKSIZE downto 0);
+begin
+  if reset = '1' then
+    write_block <= (others => '0');
+  elsif rising_edge(clock) then
+    case state is
+      when st_in_block =>
+        write_block <= input(BLOCKSIZE-1 downto 0);
+      when st_in_status =>
+        -- handled in write_allvalue and write_allmask processes
+        if input(18) = '1' and input(2) = '1' then
+          write_block <= (others => '0');
+        end if;
+      when st_add0 | st_in_float0 =>
+        carry(0) <= '0';
+      when st_add1 | st_add2 =>
+        addtmp := "0"&unsigned(input(BLOCKSIZE-1 downto 0));
+        if sig_sign = '0' then
+          addtmp := unsigned(read_block) + addtmp + carry;
+        else
+          addtmp := unsigned(read_block) - addtmp - carry;
+        end if;
+        carry(0) <= addtmp(BLOCKSIZE);
+        write_block <= subblock(addtmp(BLOCKSIZE-1 downto 0));
+      when st_fixcarry =>
+        if carry(0) = '1' and read_pos /= 0 then -- 0 means overflow
+          if sig_sign = '0' then
+            write_block <= subblock(unsigned(read_block) + carry);
+          else
+            write_block <= subblock(unsigned(read_block) - carry);
+          end if;
+        else
+          write_block <= read_block;
+        end if;
+      when others =>
+        null;
+    end case;
+  end if;
+end process;
+
+execute : process(clock,reset)
   variable bigtmp : unsigned(2*BLOCKSIZE  downto 0);
   variable shifttmp : natural range 0 to BLOCKSIZE - 1;
   variable exact : std_logic;
 begin
   if reset = '1' then
-    write_pos <= 0;
-    write_block <= (others => '0');
-    read_offset <= 0;
-    write_offset <= 0;
+    null;
   elsif rising_edge(clock) then
     case state is
       when st_out_block1 =>
         out_buf <= read_block;
-      when st_in_block =>
-        write_pos <= next_pos;
-        write_block <= input(BLOCKSIZE-1 downto 0);
       when st_out_status =>
         out_buf(31 downto 16) <= X"0007"; -- valid flags
         out_buf(15 downto 2) <= (others => '0');
@@ -265,40 +328,9 @@ begin
         end if;
         out_buf(1) <= not allmask(NUMBLOCKS);
         out_buf(0) <= allvalue(NUMBLOCKS);
-      when st_in_status =>
-        -- handled in write_allvalue and write_allmask processes
-        if input(18) = '1' and input(2) = '1' then
-          write_block <= (others => '0');
-        end if;
       when st_out_ofs =>
         out_buf(15 downto  0) <= std_logic_vector(to_signed(write_offset, 16));
         out_buf(31 downto 16) <= std_logic_vector(to_signed(read_offset , 16));
-      when st_in_ofs =>
-        write_offset <= to_integer(signed(data_in(15 downto  0)));
-        read_offset  <= to_integer(signed(data_in(31 downto 16)));
-      when st_add0 | st_in_float0 =>
-        carry(0) <= '0';
-      when st_add1 | st_add2 =>
-        write_pos <= read_pos;
-        addtmp := "0"&unsigned(input(BLOCKSIZE-1 downto 0));
-        if sig_sign = '0' then
-          addtmp := unsigned(read_block) + addtmp + carry;
-        else
-          addtmp := unsigned(read_block) - addtmp - carry;
-        end if;
-        carry(0) <= addtmp(BLOCKSIZE);
-        write_block <= subblock(addtmp(BLOCKSIZE-1 downto 0));
-      when st_fixcarry =>
-        write_pos <= read_pos;
-        if carry(0) = '1' and read_pos /= 0 then -- 0 means overflow
-          if sig_sign = '0' then
-            write_block <= subblock(unsigned(read_block) + carry);
-          else
-            write_block <= subblock(unsigned(read_block) - carry);
-          end if;
-        else
-          write_block <= read_block;
-        end if;
       when st_out_float2 =>
         bigtmp(BLOCKSIZE-1 downto 0) := unsigned(read_block);
         if exact_pos >= read_pos then
@@ -511,12 +543,26 @@ begin
   end if;
 end process;
 
+get_sign : process(clock,reset)
+begin
+  if reset = '1' then
+    sig_sign <= '0';
+  elsif rising_edge(clock) then
+    if ready_sig = '1' then
+      if op = op_floatadd then
+        sig_sign <= sign xor data_in(31);
+      else
+        sig_sign <= sign;
+      end if;
+    end if;
+  end if;
+end process;
+
 get_input : process(clock,reset)
   variable tmp : addblock;
 begin
   if reset = '1' then
     input <= (others => '0');
-    sig_sign <= '0';
   elsif rising_edge(clock) then
     if ready_sig = '1' then
       if op = op_add and sign = '1' then
@@ -534,11 +580,6 @@ begin
         end if;
       else
         input <= data_in;
-      end if;
-      if op = op_floatadd then
-        sig_sign <= sign xor data_in(31);
-      else
-        sig_sign <= sign;
       end if;
     else
     case state is
