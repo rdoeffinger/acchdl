@@ -5,6 +5,8 @@
   \node[minimum height=7cm] (HT-interface) at (90mm,0) {HT-interface};
   \node[minimum height=2cm] (acc1) at (130mm,+25mm) {Accu 1};
   \node[minimum height=2cm] (accn) at (130mm,-25mm) {Accu n};
+  \tikzstyle{dots}=[dotted,ultra thick]
+  \draw[dots,shorten >=5mm,shorten <=5mm] (acc1) -- (accn);
 
 %% draw connections
   \tikzstyle{every node}=[pos=0.5,draw=none,anchor=base]
