@@ -246,6 +246,8 @@ begin
   if reset = '1' then
     write_pos <= 0;
     write_block <= (others => '0');
+    read_offset <= 0;
+    write_offset <= 0;
   elsif rising_edge(clock) then
     case state is
       when st_out_block1 =>
@@ -406,7 +408,7 @@ begin
         when op_add | op_readblock | op_writeblock =>
           next_pos <= to_integer(signed(pos)) + NUMBLOCKS / 2;
         when op_floatadd =>
-          next_pos <= to_integer(unsigned(data_in(30 downto 28))) + (NUMBLOCKS / 2 - 4) + (write_offset / BLOCKSIZE);
+          next_pos <= (to_integer(unsigned(data_in(30 downto 23))) + write_offset) / BLOCKSIZE + (NUMBLOCKS / 2 - 4);
         when others =>
           next_pos <= 0;
       end case;
