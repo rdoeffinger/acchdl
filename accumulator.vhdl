@@ -309,7 +309,6 @@ end process;
 
 execute : process(clock,reset)
   variable bigtmp : unsigned(2*BLOCKSIZE  downto 0);
-  variable shifttmp : natural range 0 to BLOCKSIZE - 1;
   variable exact : std_logic;
 begin
   if reset = '1' then
@@ -332,7 +331,13 @@ begin
         out_buf(15 downto  0) <= std_logic_vector(to_signed(write_offset, 16));
         out_buf(31 downto 16) <= std_logic_vector(to_signed(read_offset , 16));
       when st_out_float2 =>
-        bigtmp(BLOCKSIZE-1 downto 0) := unsigned(read_block);
+        bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := unsigned(read_block);
+        bigtmp(2*BLOCKSIZE) := '0';
+        if allvalue(NUMBLOCKS) = '1' then
+          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(not read_block));
+        else
+          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(read_block));
+        end if;
         if exact_pos >= read_pos then
           exact := '1';
         else
@@ -340,15 +345,8 @@ begin
         end if;
         exp <= limited_read_pos * BLOCKSIZE - (NUMBLOCKS / 2 - 4) * BLOCKSIZE + 8 + read_offset;
       when st_out_float3 =>
-        bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := unsigned(read_block);
-        bigtmp(2*BLOCKSIZE) := '0';
-        if allvalue(NUMBLOCKS) = '1' then
-          shifttmp := BLOCKSIZE - 1 - maxbit(subblock(not read_block));
-        else
-          shifttmp := BLOCKSIZE - 1 - maxbit(subblock(read_block));
-        end if;
-        floatshift <= shifttmp;
-        exp <= exp - shifttmp;
+        bigtmp(BLOCKSIZE-1 downto 0) := unsigned(read_block);
+        exp <= exp - floatshift;
       when st_out_float4 =>
         if exp <= 0 then
           if bigtmp(31 downto 0) /= X"00000000" then
@@ -447,14 +445,16 @@ begin
       end case;
     else
     case state is
-      when st_out_float1 | st_in_float0 | st_add0 =>
+      when st_in_float0 | st_add0 =>
         next_pos <= next_pos + 1;
+      when st_out_float1 =>
+        next_pos <= next_pos - 1;
       when st_out_float0 =>
-        next_pos <= NUMBLOCKS / 2 - 4 - 1;
+        next_pos <= NUMBLOCKS / 2 - 4;
         for i in NUMBLOCKS / 2 - 4 to NUMBLOCKS - 1 loop
           if allmask(i) = '0' or
             allvalue(i) /= allvalue(NUMBLOCKS) then
-            next_pos <= i-1;
+            next_pos <= i;
           end if;
         end loop;
       when others =>
