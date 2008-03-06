@@ -244,8 +244,8 @@ begin
     write_offset <= 0;
   elsif rising_edge(clock) then
     if state = st_in_ofs then
-      write_offset <= to_integer(signed(data_in(15 downto  0)));
-      read_offset  <= to_integer(signed(data_in(31 downto 16)));
+      write_offset <= to_integer(signed(input(15 downto  0)));
+      read_offset  <= to_integer(signed(input(31 downto 16)));
     end if;
   end if;
 end process;
