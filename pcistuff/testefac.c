@@ -94,6 +94,10 @@ int process_command(volatile uint8_t *mapped) {
       asm("lfence\n\t" ::: "memory");
   } else if (strcmp(buffer, "mf") == 0) {
       asm("mfence\n\t" ::: "memory");
+  } else if (par1 && strcmp(buffer, "gofs") == 0) {
+    int16_t oldr, oldw;
+    efac_get_offsets(addr, &oldr, &oldw);
+    printf("rofs: %i wofs: %i\n", (int)oldr, (int)oldw);
   } else if (par1 && strcmp(buffer, "r64") == 0) {
     printf("%016"PRIx64"\n", mapped_64[addr]);
   } else if (par1 && strcmp(buffer, "r32") == 0) {
@@ -128,6 +132,14 @@ printf("%08x\n", dbg.i);
     efac_add(addr, valf);
   } else if (par1 && par2 && strcmp(buffer, "s") == 0) {
     efac_sub(addr, valf);
+  } else if (par1 && par2 && strcmp(buffer, "srofs") == 0) {
+    int16_t oldr, oldw;
+    efac_get_offsets(addr, &oldr, &oldw);
+    efac_set_offsets(addr, vali, oldw);
+  } else if (par1 && par2 && strcmp(buffer, "swofs") == 0) {
+    int16_t oldr, oldw;
+    efac_get_offsets(addr, &oldr, &oldw);
+    efac_set_offsets(addr, oldr, vali);
   } else
     printf("Unknown or invalid command\n");
   return 1;
