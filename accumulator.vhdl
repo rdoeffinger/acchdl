@@ -46,7 +46,7 @@ architecture behaviour of accumulator is
   attribute clock_signal of clock : signal is "yes";
   signal floatshift : natural range 0 to BLOCKSIZE-1;
   signal limited_read_pos : natural range 0 to NUMBLOCKS;
-  signal exp : integer;
+  signal exp : integer range -65536 to 65535;
   signal read_offset : integer range -32768 to 32767;
   signal write_offset : integer range -32768 to 32767;
   signal shift_cnt : natural range 0 to BLOCKSIZE-1;
@@ -338,6 +338,7 @@ begin
         else
           exact := '0';
         end if;
+        exp <= limited_read_pos * BLOCKSIZE - (NUMBLOCKS / 2 - 4) * BLOCKSIZE + 8 + read_offset;
       when st_out_float3 =>
         bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := unsigned(read_block);
         bigtmp(2*BLOCKSIZE) := '0';
@@ -347,7 +348,7 @@ begin
           shifttmp := BLOCKSIZE - 1 - maxbit(subblock(read_block));
         end if;
         floatshift <= shifttmp;
-        exp <= (limited_read_pos * BLOCKSIZE - (NUMBLOCKS / 2 - 4) * BLOCKSIZE + 8 + read_offset) - shifttmp;
+        exp <= exp - shifttmp;
       when st_out_float4 =>
         if exp <= 0 then
           if bigtmp(31 downto 0) /= X"00000000" then
