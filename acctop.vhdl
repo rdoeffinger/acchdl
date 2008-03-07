@@ -1,7 +1,9 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ht_simplify_types.all;
 use ht_mmap_if_types.all;
+use ht_constants.all;
 
 entity acctop is
   port(
@@ -135,6 +137,13 @@ signal posted_cmd_put : std_logic;
 signal posted_data_put : std_logic;
 signal posted_data_complete : std_logic;
 
+signal cmd_stop : std_logic;
+signal cmd : std_logic_vector(CMD_LEN - 1 downto 0);
+signal cmd_needs_reply : std_logic;
+signal tag : std_logic_vector(TAG_LEN - 1 downto 0);
+signal addr : std_logic_vector(ADDR_LEN - 1 downto 0);
+signal data : std_logic_vector(31 downto 0);
+
 signal response_cmd_in : std_logic_vector(95 downto 0);
 signal response_data_in : std_logic_vector(63 downto 0);
 signal response_cmd_empty : std_logic;
@@ -156,10 +165,9 @@ signal reset_n : std_logic;
 signal UnitID : std_logic_vector(4 downto 0);
 
 begin
-  interface : ht_mmap_if port map (
+  simplify : ht_simplify port map (
     reset_n => reset_n,
     clock => clock,
-    UnitID => UnitID,
 
     nonposted_cmd_in => nonposted_cmd_in,
     nonposted_data_in => nonposted_data_in,
@@ -176,6 +184,25 @@ begin
     posted_cmd_get => posted_cmd_get,
     posted_data_get => posted_data_get,
     posted_data_complete => posted_data_complete,
+
+    cmd_stop => cmd_stop,
+    cmd => cmd,
+    cmd_needs_reply => cmd_needs_reply,
+    tag => tag,
+    addr => addr,
+    data => data
+  );
+  interface : ht_mmap_if port map (
+    reset_n => reset_n,
+    clock => clock,
+    UnitID => UnitID,
+
+    cmd_stop => cmd_stop,
+    cmd => cmd,
+    cmd_needs_reply => cmd_needs_reply,
+    tag => tag,
+    addr => addr,
+    data => data,
 
     response_cmd_out => response_cmd_out,
     response_data_out => response_data_out,

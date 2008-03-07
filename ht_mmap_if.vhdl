@@ -2,6 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use accumulator_types.all;
+use ht_constants.all;
 
 entity ht_mmap_if is
   port(
@@ -9,21 +10,12 @@ entity ht_mmap_if is
     clock : in std_logic;
     UnitID : in std_logic_vector(4 downto 0);
 
-    nonposted_cmd_in : in std_logic_vector(95 downto 0);
-    nonposted_data_in : in std_logic_vector(63 downto 0);
-    nonposted_cmd_empty : in std_logic;
-    nonposted_data_empty : in std_logic;
-    nonposted_cmd_get : out std_logic;
-    nonposted_data_get : out std_logic;
-    nonposted_data_complete : out std_logic;
-
-    posted_cmd_in : in std_logic_vector(95 downto 0);
-    posted_data_in : in std_logic_vector(63 downto 0);
-    posted_cmd_empty : in std_logic;
-    posted_data_empty : in std_logic;
-    posted_cmd_get : out std_logic;
-    posted_data_get : out std_logic;
-    posted_data_complete : out std_logic;
+    cmd_stop : out std_logic;
+    cmd : in std_logic_vector(CMD_LEN - 1 downto 0);
+    cmd_needs_reply : in std_logic;
+    tag : in std_logic_vector(TAG_LEN - 1 downto 0);
+    addr : in std_logic_vector(ADDR_LEN - 1 downto 0);
+    data : in std_logic_vector(31 downto 0);
 
     response_cmd_out : out std_logic_vector(95 downto 0);
     response_data_out : out std_logic_vector(63 downto 0);
@@ -43,15 +35,6 @@ constant COUNT_OFFSET: integer := 22;
 constant COUNT_LEN   : integer :=  4;
 constant ADDR_OFFSET : integer := 26;
 constant ADDR_LEN    : integer := 62;
-
-alias posted_cmd_in_cmd       : std_logic_vector(CMD_LEN  - 1 downto 0) is posted_cmd_in(   CMD_OFFSET  + CMD_LEN  - 1 downto CMD_OFFSET);
-alias posted_cmd_in_tag       : std_logic_vector(TAG_LEN  - 1 downto 0) is posted_cmd_in(   TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
-alias posted_cmd_in_count     : std_logic_vector(COUNT_LEN- 1 downto 0) is posted_cmd_in( COUNT_OFFSET  + COUNT_LEN- 1 downto COUNT_OFFSET);
-alias posted_cmd_in_addr      : std_logic_vector(ADDR_LEN - 1 downto 0) is posted_cmd_in(   ADDR_OFFSET + ADDR_LEN - 1 downto ADDR_OFFSET);
-alias nonposted_cmd_in_cmd    : std_logic_vector(CMD_LEN  - 1 downto 0) is nonposted_cmd_in(CMD_OFFSET  + CMD_LEN  - 1 downto CMD_OFFSET);
-alias nonposted_cmd_in_tag    : std_logic_vector(TAG_LEN  - 1 downto 0) is nonposted_cmd_in(TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
-alias nonposted_cmd_in_count  : std_logic_vector(COUNT_LEN- 1 downto 0) is nonposted_cmd_in(COUNT_OFFSET+ COUNT_LEN- 1 downto COUNT_OFFSET);
-alias nonposted_cmd_in_addr   : std_logic_vector(ADDR_LEN - 1 downto 0) is nonposted_cmd_in(ADDR_OFFSET + ADDR_LEN - 1 downto ADDR_OFFSET);
 
 alias response_cmd_out_cmd    : std_logic_vector(CMD_LEN  - 1 downto 0) is response_cmd_out(CMD_OFFSET  + CMD_LEN  - 1 downto CMD_OFFSET);
 alias response_cmd_out_unitid : std_logic_vector(5        - 1 downto 0) is response_cmd_out(12 downto 8);
@@ -74,61 +57,7 @@ signal pos : position_array_t;
 type state_t is (START, READ_WAIT, READ_WAIT2, READ_WAIT3, READ_WAIT4);
 signal state : state_t;
 signal read_reg : natural range 0 to NUMREGS - 1;
-signal cmd_stop : std_logic;
-signal new_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
-signal new_cmd_needs_reply : std_logic;
-signal new_tag : std_logic_vector(TAG_LEN - 1 downto 0);
-signal new_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
-signal new_data : std_logic_vector(31 downto 0);
-signal last_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
-signal last_cmd_needs_reply : std_logic;
-signal last_tag : std_logic_vector(TAG_LEN - 1 downto 0);
-signal last_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
-signal last_data : std_logic_vector(31 downto 0);
-signal cmd : std_logic_vector(CMD_LEN - 1 downto 0);
-signal cmd_needs_reply : std_logic;
-signal tag : std_logic_vector(TAG_LEN - 1 downto 0);
-signal addr : std_logic_vector(ADDR_LEN - 1 downto 0);
 signal cmd_reg : integer range 0 to NUMREGS - 1;
-signal data : std_logic_vector(31 downto 0);
-
-signal last_p_cmd_avail : std_logic;
-signal last_p_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
-signal last_p_count : unsigned(COUNT_LEN - 1 downto 0);
-signal last_p_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
-signal last_p_data_avail : std_logic;
-signal last_p_data : std_logic_vector(63 downto 0);
-
-signal p_cmd_avail : std_logic;
-signal p_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
-signal p_count : unsigned(COUNT_LEN - 1 downto 0);
-signal p_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
-signal p_data_avail : std_logic;
-signal p_data : std_logic_vector(63 downto 0);
-
-signal p_cmd_stop : std_logic;
-signal p_data_stop : std_logic;
-signal p_done : unsigned(COUNT_LEN - 1 downto 0);
-
-signal last_np_cmd_avail : std_logic;
-signal last_np_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
-signal last_np_count : unsigned(COUNT_LEN - 1 downto 0);
-signal last_np_tag : std_logic_vector(TAG_LEN - 1 downto 0);
-signal last_np_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
-signal last_np_data_avail : std_logic;
-signal last_np_data : std_logic_vector(63 downto 0);
-
-signal np_cmd_avail : std_logic;
-signal np_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
-signal np_count : unsigned(COUNT_LEN - 1 downto 0);
-signal np_tag : std_logic_vector(TAG_LEN - 1 downto 0);
-signal np_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
-signal np_data_avail : std_logic;
-signal np_data : std_logic_vector(63 downto 0);
-
-signal np_cmd_stop : std_logic;
-signal np_data_stop : std_logic;
-signal np_done : unsigned(COUNT_LEN - 1 downto 0);
 
   function needs_data(cmd : in std_logic_vector(CMD_LEN - 1 downto 0)) return boolean is
     variable res : boolean;
@@ -165,66 +94,6 @@ begin
   response_cmd_out(15 downto 13) <= "000";
   response_cmd_out(92 downto 21) <= X"000000000000000000";
   response_cmd_out_unitid <= UnitID;
-
-  cmd <= last_cmd when cmd_stop = '1' else new_cmd;
-  cmd_needs_reply <= last_cmd_needs_reply when cmd_stop = '1' else new_cmd_needs_reply;
-  tag <= last_tag when cmd_stop = '1' else new_tag;
-  addr <= last_addr when cmd_stop = '1' else new_addr;
-  cmd_reg <= to_integer(unsigned(addr(10 + REGBITS - 1 downto 10)));
-  data <= last_data when cmd_stop = '1' else new_data;
-
-  posted_cmd_get     <= not p_cmd_stop;
-  posted_data_get    <= not p_data_stop;
-  nonposted_cmd_get  <= not np_cmd_stop;
-  nonposted_data_get <= not np_data_stop;
-
-  p_cmd_avail   <= last_p_cmd_avail   when p_cmd_stop   = '1' else not posted_cmd_empty;
-  p_cmd         <= last_p_cmd         when p_cmd_stop   = '1' else posted_cmd_in_cmd;
-  p_count       <= last_p_count       when p_cmd_stop   = '1' else unsigned(posted_cmd_in_count);
-  p_addr        <= last_p_addr        when p_cmd_stop   = '1' else posted_cmd_in_addr;
-  p_data_avail  <= last_p_data_avail  when p_data_stop  = '1' else not posted_data_empty;
-  p_data        <= last_p_data        when p_data_stop  = '1' else posted_data_in;
-
-  np_cmd_avail  <= last_np_cmd_avail  when np_cmd_stop  = '1' else not nonposted_cmd_empty;
-  np_cmd        <= last_np_cmd        when np_cmd_stop  = '1' else nonposted_cmd_in_cmd;
-  np_count      <= last_np_count      when np_cmd_stop  = '1' else unsigned(nonposted_cmd_in_count);
-  np_tag        <= last_np_tag        when np_cmd_stop  = '1' else nonposted_cmd_in_tag;
-  np_addr       <= last_np_addr       when np_cmd_stop  = '1' else nonposted_cmd_in_addr;
-  np_data_avail <= last_np_data_avail when np_data_stop = '1' else not nonposted_data_empty;
-  np_data       <= last_np_data       when np_data_stop = '1' else nonposted_data_in;
-
-  process(clock,reset_n)
-  begin
-    if reset_n = '0' then
-      last_p_cmd_avail   <= '0';
-      last_p_data_avail  <= '0';
-      last_np_cmd_avail  <= '0';
-      last_np_data_avail <= '0';
-    elsif rising_edge(clock) then
-      if p_cmd_stop = '0' then
-        last_p_cmd_avail   <= not posted_cmd_empty;
-        last_p_cmd         <= posted_cmd_in_cmd;
-        last_p_count       <= unsigned(posted_cmd_in_count);
-        last_p_addr        <= posted_cmd_in_addr;
-      end if;
-      if p_data_stop = '0' then
-        last_p_data_avail  <= not posted_data_empty;
-        last_p_data        <= posted_data_in;
-      end if;
-
-      if np_cmd_stop = '0' then
-        last_np_cmd_avail  <= not nonposted_cmd_empty;
-        last_np_cmd        <= nonposted_cmd_in_cmd;
-        last_np_count      <= unsigned(nonposted_cmd_in_count);
-        last_np_tag        <= nonposted_cmd_in_tag;
-        last_np_addr       <= nonposted_cmd_in_addr;
-      end if;
-      if np_data_stop = '0' then
-        last_np_data_avail <= not nonposted_data_empty;
-        last_np_data       <= nonposted_data_in;
-      end if;
-    end if;
-  end process;
 
   handle_reply : process(clock,reset_n)
     variable put_data : std_logic;
@@ -285,25 +154,6 @@ begin
     elsif rising_edge(clock) then
       if state = START and cmd(5 downto 4) = "01" and ready(cmd_reg) = '1' then
         read_reg <= cmd_reg;
-      end if;
-    end if;
-  end process;
-
-  move_last : process(clock,reset_n)
-  begin
-    if reset_n = '0' then
-      last_cmd <= (others => '0');
-      last_cmd_needs_reply <= '0';
-      last_tag <= (others => '0');
-      last_addr <= (others => '0');
-      last_data <= (others => '0');
-    elsif rising_edge(clock) then
-      if cmd_stop = '0' then
-        last_cmd <= new_cmd;
-        last_cmd_needs_reply <= new_cmd_needs_reply;
-        last_tag <= new_tag;
-        last_addr <= new_addr;
-        last_data <= new_data;
       end if;
     end if;
   end process;
@@ -375,84 +225,4 @@ begin
     end if;
   end process;
 
-  process(clock,reset_n)
-  begin
-    if reset_n = '0' then
-      posted_data_complete <= '0';
-      nonposted_data_complete <= '0';
-      p_cmd_stop <= '0';
-      p_data_stop <= '0';
-      np_cmd_stop <= '0';
-      np_data_stop <= '0';
-      p_done <= (others => '0');
-      np_done <= (others => '0');
-      new_cmd <= (others => '0');
-      new_cmd_needs_reply <= '0';
-      new_tag <= (others => '0');
-      new_addr <= (others => '0');
-      new_data <= (others => '0');
-    elsif rising_edge(clock) then
-      p_cmd_stop <= p_cmd_avail;
-      p_data_stop <= p_data_avail;
-      posted_data_complete <= '0';
-      np_cmd_stop <= np_cmd_avail;
-      np_data_stop <= np_data_avail;
-      nonposted_data_complete <= '0';
-      if cmd_stop = '0' then
-        if p_cmd_avail = '1' and
-          (p_data_avail = '1' or not needs_data(p_cmd)) then
-          new_cmd <= p_cmd;
-          new_cmd_needs_reply <= '0';
-          new_tag <= (others => '0');
-          new_addr <= std_logic_vector(unsigned(p_addr) + p_done);
-          if p_done(0) = '0' then
-            new_data <= p_data(31 downto 0);
-          else
-            new_data <= p_data(63 downto 32);
-          end if;
-          if needs_data(p_cmd) and p_done = p_count then
-            posted_data_complete <= '1';
-          end if;
-          if needs_data(p_cmd) and (p_done(0) = '1' or p_done = p_count) then
-            p_data_stop <= '0';
-          end if;
-          if not needs_data(p_cmd) or p_done = p_count then
-            p_cmd_stop <= '0';
-            p_done <= (others => '0');
-          else
-            p_done <= p_done + 1;
-          end if;
-        elsif np_cmd_avail = '1' and
-             (np_data_avail = '1' or not needs_data(np_cmd)) then
-          new_cmd <= np_cmd;
-          new_cmd_needs_reply <= '1';
-          new_tag <= np_tag;
-          new_addr <= std_logic_vector(unsigned(np_addr) + np_done);
-          if np_done(0) = '0' then
-            new_data <= np_data(31 downto 0);
-          else
-            new_data <= np_data(63 downto 32);
-          end if;
-          if needs_data(np_cmd) and np_done = np_count then
-            nonposted_data_complete <= '1';
-          end if;
-          if needs_data(np_cmd) and (np_done(0) = '1' or np_done = np_count) then
-            np_data_stop <= '0';
-          end if;
-          if not needs_data(np_cmd) or np_done = np_count then
-            np_cmd_stop <= '0';
-            np_done <= (others => '0');
-          else
-            np_done <= np_done + 1;
-          end if;
-        else
-          new_cmd <= (others => '0');
-          new_cmd_needs_reply <= '0';
-          new_tag <= (others => '0');
-          new_addr <= (others => '0');
-          new_data <= (others => '0');
-        end if;
-      end if;
-    end if;
-  end process;
 end architecture;

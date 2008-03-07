@@ -1,6 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ht_constants.all;
 
 package ht_mmap_if_types is
 component ht_mmap_if is
@@ -9,21 +10,12 @@ component ht_mmap_if is
     clock : in std_logic;
     UnitID : in std_logic_vector(4 downto 0);
 
-    nonposted_cmd_in : in std_logic_vector(95 downto 0);
-    nonposted_data_in : in std_logic_vector(63 downto 0);
-    nonposted_cmd_empty : in std_logic;
-    nonposted_data_empty : in std_logic;
-    nonposted_cmd_get : out std_logic;
-    nonposted_data_get : out std_logic;
-    nonposted_data_complete : out std_logic;
-
-    posted_cmd_in : in std_logic_vector(95 downto 0);
-    posted_data_in : in std_logic_vector(63 downto 0);
-    posted_cmd_empty : in std_logic;
-    posted_data_empty : in std_logic;
-    posted_cmd_get : out std_logic;
-    posted_data_get : out std_logic;
-    posted_data_complete : out std_logic;
+    cmd_stop : out std_logic;
+    cmd : in std_logic_vector(CMD_LEN - 1 downto 0);
+    cmd_needs_reply : in std_logic;
+    tag : in std_logic_vector(TAG_LEN - 1 downto 0);
+    addr : in std_logic_vector(ADDR_LEN - 1 downto 0);
+    data : in std_logic_vector(31 downto 0);
 
     response_cmd_out : out std_logic_vector(95 downto 0);
     response_data_out : out std_logic_vector(63 downto 0);
