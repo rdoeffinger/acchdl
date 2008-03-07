@@ -50,6 +50,14 @@ op_writeflags: set the flags marked by a set bit in the upper 16 bits to
            and may need additional, more careful processing later.
     Bit 2: zero. Setting to 0 has no effect, setting to 1 clears the register
            (bits 0 and 1 should be set to 0 at the same time preferably).
+op_readoffsets:
+    get exponent offsets for floating point operations.
+    Exponent offsets are two 16 bit signed integers.
+    Lower 16 bits are for writes (op_floatadd) higher 16 bits for reads (op_readfloat).
+op_writeoffsets:
+    set exponent offsets for floating point operations.
+    Exponent offsets are two 16 bit signed integers.
+    Lower 16 bits are for writes (op_floatadd) higher 16 bits for reads (op_readfloat).
 op_readfloat: reads the current register content as a single-precision
     floating-point value. Denormals and +/-Inf are supported, values that should
     be NaN are returned as +/-Inf.
