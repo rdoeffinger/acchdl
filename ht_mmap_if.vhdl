@@ -95,6 +95,8 @@ begin
   response_cmd_out(92 downto 21) <= X"000000000000000000";
   response_cmd_out_unitid <= UnitID;
 
+  cmd_reg <= to_integer(unsigned(addr(10 + REGBITS - 1 downto 10)));
+
   handle_reply : process(clock,reset_n)
     variable put_data : std_logic;
   begin
