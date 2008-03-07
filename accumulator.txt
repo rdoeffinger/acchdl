@@ -146,7 +146,7 @@ These steps are organized into clock cycles as follows:
 Clock 1: wait, since this could overlap with write-back from previous operation
 Clock 2: 1)
 Clock 3: 2), 6)
-Clock 4: 2)
-Clock 5: 3)
+Clock 4: 2), 3)
+Clock 5: 4)
 Clock 6: 4), 5), 7), 8)
 Clock 7: 9), 10), 11)
