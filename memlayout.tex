@@ -1,0 +1,36 @@
+\begin{tikzpicture}
+  \newcommand{\rectw}{10mm}
+  \newcommand{\recth}{5mm}
+  \newcommand\drawblock[3]{\draw (#1*\rectw,#2*\recth) rectangle +(\rectw,\recth);\draw (#1*\rectw+\rectw/2,#2*\recth+\recth/2) node {#3};}
+  \newcounter{addr}
+  \foreach \y/\text in {0/add,1/add,2/sub,3/sub}{
+    \setcounter{addr}{8*\y}
+    \draw (8*\rectw,\y*\recth) node[right] {\arabic{addr}};
+    \foreach \x in {0,...,7}{
+      \drawblock{\x}{\y}{\text}
+    }
+  }
+  \setcounter{addr}{8*4}
+  \draw (8*\rectw,4*\recth) node[right] {\arabic{addr}};
+
+% reserved command part
+  \draw[style=dotted] (0*\rectw,4*\recth) rectangle +(8*\rectw,2*\recth);
+  \draw (4*\rectw,5*\recth) node {reserved};
+
+  \draw (8*\rectw,6*\recth) node[right] {512};
+% status flags/offsets part
+  \drawblock{7}{6}{status}
+  \drawblock{6}{6}{offsets}
+  \setcounter{addr}{512+8}
+  \draw (8*\rectw,7*\recth) node[right] {\arabic{addr}};
+
+% reserved status part
+  \draw[style=dotted] (0*\rectw,6*\recth) rectangle +(8*\rectw,2*\recth);
+  \draw (4*\rectw,7*\recth) node {reserved};
+
+% main register
+  \draw (0*\rectw,8*\recth) rectangle +(8*\rectw,4*\recth);
+  \draw (4*\rectw,10*\recth) node {sign-extended, two's-complement register value};
+  \draw (8*\rectw,12*\recth) node[right] {1024};
+
+\end{tikzpicture}
