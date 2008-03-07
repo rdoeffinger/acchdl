@@ -345,26 +345,22 @@ begin
         if ready(regnum) = '1' then
           if regnum = cmd_reg and state = START then
             if cmd(4 downto 2) = "011" then
-              if addr(9) = '1' then
-                if addr(8 downto 0) = "000000000" then
-                  op(regnum) <= op_writeflags;
-                elsif addr(8 downto 0) = "000000001" then
-                  op(regnum) <= op_writeoffsets;
-                else
-                  op(regnum) <= op_writeblock;
-                end if;
+              if    addr(9 downto 0) = "1000000000" then
+                op(regnum) <= op_writeflags;
+              elsif addr(9 downto 0) = "1000000001" then
+                op(regnum) <= op_writeoffsets;
+              elsif addr(9) = '1' then
+                op(regnum) <= op_writeblock;
               else
                 op(regnum) <= op_floatadd;
               end if;
             elsif cmd(5 downto 4) = "01" then
-              if addr(9) = '1' then
-                if addr(8 downto 0) = "000000000" then
-                  op(regnum) <= op_readflags;
-                elsif addr(8 downto 0) = "000000001" then
-                  op(regnum) <= op_readoffsets;
-                else
-                  op(regnum) <= op_readblock;
-                end if;
+              if    addr(9 downto 0) = "1000000000" then
+                op(regnum) <= op_readflags;
+              elsif addr(9 downto 0) = "1000000001" then
+                op(regnum) <= op_readoffsets;
+              elsif addr(9) = '1' then
+                op(regnum) <= op_readblock;
               else
                 op(regnum) <= op_readfloat;
               end if;
