@@ -80,7 +80,7 @@ static void set_mtrr(off_t base, size_t size, char *mode) {
   close(fd);
 }
 
-#define REGCNT 8
+#define REGCNT 16
 #define REGSZ 4096
 #define EFAC_ALIGNED(n, t, v) t v __attribute__((aligned(n)))
 
