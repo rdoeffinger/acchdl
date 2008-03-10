@@ -5,6 +5,7 @@ use ieee.numeric_std.all;
 package accumulator_types is
   constant BLOCKSIZE : integer := 32;
   constant BLOCKBITS : integer := 5;
+  constant BLOCKADDRBITS : integer := 5;
   constant NUMBLOCKS : integer := 23;
   subtype operation is std_logic_vector(3 downto 0);
   subtype position_t is std_logic_vector(8 downto 0);
