@@ -73,7 +73,6 @@ find_carry_pos : process(clock,reset)
   variable add : natural;
   variable tmp : flagtype;
   variable tmp2 : flagtype;
-  variable cptmp : unsigned(BLOCKBITS - 1 downto 0);
   variable small_pos : natural range 0 to NUMBLOCKS - 1;
 begin
   if reset = '1' then
@@ -87,16 +86,14 @@ begin
         if sig_sign = '0' then
           tmp := allvalue and allmask;
           tmp2 := std_logic_vector(unsigned(tmp) + add);
-          tmp := tmp2 and not tmp;
-          tmp2 := tmp2 and not tmp;
+          carry_allvalue <= tmp and not tmp2;
         else
           tmp := allvalue or not allmask;
           tmp2 := std_logic_vector(unsigned(tmp) - add);
-          tmp := tmp and not tmp2;
-          tmp2 := tmp2 or tmp;
+          carry_allvalue <= tmp2 and not tmp;
         end if;
-        carry_allvalue <= allvalue xor tmp2;
-        carry_pos <= maxbit(X"00"&"0"&tmp(NUMBLOCKS-1 downto 0));
+      when st_add2 =>
+        carry_pos <= next_pos;
       when others =>
         null;
     end case;
@@ -122,21 +119,15 @@ begin
 end process;
 
 read : process(clock,reset)
-variable pos : integer;
 variable small_pos : natural range 0 to NUMBLOCKS - 1;
 variable from_accu : subblock;
 begin
   if reset = '1' then
     read_block <= (others => '0');
   elsif rising_edge(clock) then
-    if state = st_add2 then
-      pos := carry_pos;
-    else
-      pos := next_pos;
-    end if;
-    small_pos := pos;
+    small_pos := next_pos;
     from_accu := accu(small_pos);
-    if pos >= 0 and pos < NUMBLOCKS then
+    if next_pos >= 0 and next_pos < NUMBLOCKS then
       if small_pos = write_pos then
         read_block <= write_block;
       elsif allmask(small_pos) = '1' then
@@ -145,7 +136,7 @@ begin
         read_block <= from_accu;
       end if;
     else
-      if pos < 0 then
+      if next_pos < 0 then
         read_block <= (others => '0');
       else
         read_block <= (others => allvalue(NUMBLOCKS));
@@ -159,11 +150,7 @@ begin
   if reset = '1' then
     read_pos <= 0;
   elsif rising_edge(clock) then
-    if state = st_add2 then
-      read_pos <= carry_pos;
-    else
-      read_pos <= next_pos;
-    end if;
+    read_pos <= next_pos;
   end if;
 end process;
 
@@ -430,6 +417,10 @@ end process;
 
 get_next_pos : process(clock,reset)
   variable i : integer;
+  variable add : natural;
+  variable tmp : flagtype;
+  variable tmp2 : flagtype;
+  variable small_pos : natural range 0 to NUMBLOCKS - 1;
 begin
   if reset = '1' then
     next_pos <= 0;
@@ -447,6 +438,19 @@ begin
     case state is
       when st_in_float0 | st_add0 =>
         next_pos <= next_pos + 1;
+      when st_add1 =>
+        small_pos := read_pos;
+        add := 2**(small_pos + 2);
+        if sig_sign = '0' then
+          tmp := allvalue and allmask;
+          tmp2 := std_logic_vector(unsigned(tmp) + add);
+          tmp := tmp2 and not tmp;
+        else
+          tmp := allvalue or not allmask;
+          tmp2 := std_logic_vector(unsigned(tmp) - add);
+          tmp := tmp and not tmp2;
+        end if;
+        next_pos <= maxbit(X"00"&"0"&tmp(NUMBLOCKS-1 downto 0));
       when st_out_float1 =>
         next_pos <= next_pos - 1;
       when st_out_float0 =>
