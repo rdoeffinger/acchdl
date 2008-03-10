@@ -36,7 +36,7 @@
 %% mmap interface <-> accumulators connections
   \renewcommand{\mysc}{-3mm}
   \renewcommand{\myofs}{7mm}
-  \foreach \n/\txt in {  0/op, 1/addr, 2/sign, 3/data\_in} {
+  \foreach \n/\txt in {  0/op, 1/pos, 2/sign, 3/data\_in} {
     \draw[->] ([yshift= 25mm+\mysc*\n+\myofs] HT-interface.east) -- ([yshift=\mysc*\n+\myofs] acc1.west) node {\txt};
     \draw[->] ([yshift=-25mm+\mysc*\n+\myofs] HT-interface.east) -- ([yshift=\mysc*\n+\myofs] accn.west) node {\txt};
   };
