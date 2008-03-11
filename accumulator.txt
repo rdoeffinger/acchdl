@@ -106,7 +106,7 @@ Clock 4: 7), 9), 13a)
 Clock 5: 10), 12), 14a), 13b), 13c)
 Clock 6: 15a)
 
-Note that precessing of the next operation starts with Clock 5, so in
+Note that processing of the next operation starts with Clock 5, so in
 each 4 cycles one floatadd operation can complete.
 Reducing the number of clock cycles is difficult for several reasons:
 1) Skipping carry resolution if there is no carry is probably easiest, but
