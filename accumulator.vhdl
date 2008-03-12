@@ -37,6 +37,7 @@ architecture behaviour of accumulator is
   signal next_pos : integer := 0;
   signal read_pos : integer := 0;
   signal write_pos : integer;
+  signal write_enable : std_logic_vector(0 downto 0);
   signal read_block : subblock;
   signal write_block : subblock;
   signal state : state_t;
@@ -128,7 +129,7 @@ begin
     small_pos := next_pos;
     from_accu := accu(small_pos);
     if next_pos >= 0 and next_pos < NUMBLOCKS then
-      if small_pos = write_pos then
+      if write_enable(0) = '1' and small_pos = write_pos then
         read_block <= write_block;
       elsif allmask(small_pos) = '1' then
         read_block <= (others => allvalue(small_pos));
@@ -160,7 +161,7 @@ begin
   if reset = '1' then
     null;
   elsif rising_edge(clock) then
-    if write_pos >= 0 and write_pos < NUMBLOCKS then
+    if write_enable(0) = '1' then
       small_pos := write_pos;
       accu(small_pos) <= write_block;
     end if;
@@ -185,7 +186,7 @@ begin
       allmask <= (others => '1');
     else
       replicate := (others => write_block(0));
-    if write_pos >= 0 and write_pos < NUMBLOCKS then
+    if write_enable(0) = '1' then
       if write_block = replicate then
         allmask(write_pos) <= '1';
       else
@@ -212,7 +213,7 @@ begin
       if state = st_fixcarry and carry(0) = '1' then
         tmp := tmp xor carry_allvalue;
       end if;
-      if write_pos >= 0 and write_pos < NUMBLOCKS then
+      if write_enable(0) = '1' then
       tmp(write_pos) := write_block(0);
       end if;
       if state = st_fixcarry then
@@ -241,14 +242,25 @@ set_write_pos : process(clock,reset)
 begin
   if reset = '1' then
     write_pos <= 0;
+    write_enable <= "0";
   elsif rising_edge(clock) then
     case state is
       when st_in_block =>
+        if next_pos >= 0 and next_pos < NUMBLOCKS then
+          write_enable <= "1";
+        else
+          write_enable <= "0";
+        end if;
         write_pos <= next_pos;
       when st_add1 | st_add2 | st_fixcarry =>
+        if read_pos >= 0 and read_pos < NUMBLOCKS then
+          write_enable <= "1";
+        else
+          write_enable <= "0";
+        end if;
         write_pos <= read_pos;
       when others =>
-        null;
+        write_enable <= "0";
     end case;
   end if;
 end process;
