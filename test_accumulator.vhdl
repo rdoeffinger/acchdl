@@ -15,7 +15,7 @@ architecture behaviour of test_accumulator is
   signal acc_sign : std_logic;
   signal acc_res : subblock;
 
-  constant NUMTESTS : integer := 33;
+  constant NUMTESTS : integer := 38;
   type ops_t is array (0 to NUMTESTS - 1) of operation;
   constant ops : ops_t := (
     op_nop, op_floatadd, op_floatadd, op_floatadd, op_readfloat,
@@ -29,6 +29,8 @@ architecture behaviour of test_accumulator is
     op_floatadd, op_floatadd, op_readfloat,
     op_writeflags,
     op_floatadd, op_readfloat,
+    op_writeflags,
+    op_floatadd, op_floatadd, op_readfloat, op_readfloat,
     op_writeflags,
     op_add, op_add, op_add, op_readblock, op_readfloat
   );
@@ -46,6 +48,8 @@ architecture behaviour of test_accumulator is
     X"00000000ff000000", X"00000000ff000000", (others => '1'),
     X"0000000000040004",
     X"00000000ff800000", (others => '1'),
+    X"0000000000040004",
+    X"0000000014800000", X"0000000080000001", (others => '1'), (others => '1'),
     X"0000000000040004",
     X"0123456789abcdef", X"19acdefffffff000", (others => '1'), (others => 'Z'), (others => 'Z')
   );
@@ -69,18 +73,22 @@ architecture behaviour of test_accumulator is
     pos0,
     pos0, pos_round,
     pos0,
+    pos0, pos0, pos0, pos_round,
+    pos0,
     pos1, pos1, pos1, pos3, pos0
   );
 
   type resets_t is array (0 to NUMTESTS - 1) of std_logic;
   constant resets : resets_t := (
-    '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'
+    '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
+    '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
+    '0', '0', '0', '0', '0', '0', '0', '0'
   );
 
-  constant NUMREADS : integer := 6;
+  constant NUMREADS : integer := 8;
   type results_t is array (0 to NUMREADS - 1) of subblock;
   constant results : results_t := (
-    X"bfc00000", X"45548000", X"00080001", X"00800002", X"FF800000", X"7F800000"
+    X"bfc00000", X"45548000", X"00080001", X"00800002", X"FF800000", X"7F800000", X"147FFFFF", X"14800000"
   );
 
 constant ACC_CLOCK_PERIOD : time := 10ns;
