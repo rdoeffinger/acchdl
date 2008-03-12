@@ -526,7 +526,12 @@ begin
       when st_add2 =>
         next_state := st_fixcarry;
       when st_out_float0 =>
-        next_state := st_out_float1;
+        -- result might be wrong if a write was active, repeat
+        if write_enable(0) = '1' then
+          next_state := st_out_float0;
+        else
+          next_state := st_out_float1;
+        end if;
       when st_out_float1 =>
         next_state := st_out_float2;
       when st_out_float2 =>
