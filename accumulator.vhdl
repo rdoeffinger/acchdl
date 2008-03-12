@@ -50,6 +50,7 @@ architecture behaviour of accumulator is
   signal exp : integer range -65536 to 65535;
   signal read_offset : integer range -32768 to 32767;
   signal write_offset : integer range -32768 to 32767;
+  signal write_offset_block : integer range -65536 to 65535;
   signal shift_cnt : natural range 0 to BLOCKSIZE-1;
   signal ready_sig : std_logic;
   signal carry_pos : natural range 0 to NUMBLOCKS-1;
@@ -230,9 +231,12 @@ begin
   if reset = '1' then
     read_offset <= 0;
     write_offset <= 0;
+    write_offset_block <= (NUMBLOCKS / 2 - 4)*BLOCKSIZE;
   elsif rising_edge(clock) then
     if state = st_in_ofs then
       write_offset <= to_integer(signed(input(15 downto  0)));
+      write_offset_block <= to_integer(signed(input(15 downto  0))) +
+          (NUMBLOCKS / 2 - 4)*BLOCKSIZE;
       read_offset  <= to_integer(signed(input(31 downto 16)));
     end if;
   end if;
@@ -442,7 +446,7 @@ begin
         when op_add | op_readblock | op_writeblock =>
           next_pos <= to_integer(signed(pos)) + NUMBLOCKS / 2;
         when op_floatadd =>
-          next_pos <= (to_integer(unsigned(data_in(30 downto 23))) + write_offset) / BLOCKSIZE + (NUMBLOCKS / 2 - 4);
+          next_pos <= (to_integer(unsigned(data_in(30 downto 23))) + write_offset_block) / BLOCKSIZE;
         when others =>
           next_pos <= 0;
       end case;
