@@ -1,3 +1,6 @@
+--! \file
+--! \brief implementation of the core ALU module
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -14,11 +17,12 @@ entity accumulator is
     data_in : in addblock;
     data_out : out subblock;
     pos : in position_t;
-    op : in operation
+    op : in operation  --! next operation to execute
   );
 end accumulator;
 
 architecture behaviour of accumulator is
+  --! internal state machine, used in a way similar to microcode
   type state_t is (st_ready, st_in_float0, st_add0, st_add1, st_add2, st_fixcarry,
                    st_out_block0, st_out_block1,
                    st_in_block, st_out_status, st_in_status, st_out_ofs, st_in_ofs,
@@ -26,17 +30,27 @@ architecture behaviour of accumulator is
                    st_out_float4,
                    st_out_float_normal, st_out_float_denormal, st_out_float_inf);
 
+  --! if set, round to nearest when reading a float value
   signal round_nearest : std_logic;
+  --! if round_nearest is not set, depending on this value round to positive or negative infinity when reading a float value
   signal round_inf : std_logic;
+  --! if set, invert meaning of round_inf for negative values (used to implement rounding to and away from 0)
   signal round_sign : std_logic;
+  --! main memory module, organized in NUMBLOCKS values of BLOCKBITS bits
   signal accu : accutype;
+  --! if set to 1, all bits of corresponding block have the same value. allmask(NUMBLOCKS) if unset indicates overflow.
   signal allmask : flagtype;
+  --! bit value of blocks where corresponding allmask is set. allvalue(NUMBLOCKS) if indicates sign.
   signal allvalue : flagtype;
   signal input : addblock;
   signal sig_sign : std_logic;
+  --! number of next block to be processed, this one is currently being read
   signal next_pos : integer range -4096 to 4095 := 0;
+  --! number of read block, corresponding data is in read_block
   signal read_pos : integer range -4096 to 4095 := 0;
+  --! number of block to write, corresponding data is in write_block
   signal write_pos : integer range -4096 to 4095;
+  --! only if set to 1 data in write_block is valid and should be written
   signal write_enable : std_logic_vector(0 downto 0);
   signal read_block : subblock;
   signal write_block : subblock;
@@ -56,6 +70,7 @@ architecture behaviour of accumulator is
   signal carry_pos : natural range 0 to NUMBLOCKS-1;
   signal carry_allvalue : flagtype;
   signal exact_pos : natural range 0 to NUMBLOCKS;
+  --! return number of highest set bit
   function maxbit(v: subblock) return integer is
     variable i : natural range 1 to BLOCKSIZE-1;
   begin
@@ -71,6 +86,7 @@ begin
   ready <= ready_sig and not reset;
   data_out <= out_buf;
 
+--! \brief find the position where carry resolution must happen
 find_carry_pos : process(clock,reset)
   variable add : natural;
   variable tmp : flagtype;
