@@ -1,3 +1,5 @@
+--! \file
+--! \brief simplify HyperTransport handling
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -25,12 +27,12 @@ entity ht_simplify is
     posted_data_get : out std_logic;
     posted_data_complete : out std_logic;
 
-    cmd_stop : in std_logic;
-    cmd : out std_logic_vector(CMD_LEN - 1 downto 0);
-    cmd_needs_reply : out std_logic;
-    tag : out std_logic_vector(TAG_LEN - 1 downto 0);
-    addr : out std_logic_vector(ADDR_LEN - 1 downto 0);
-    data : out std_logic_vector(31 downto 0)
+    cmd_stop : in std_logic; --! if set, output the same command during the next cycle
+    cmd : out std_logic_vector(CMD_LEN - 1 downto 0); --! current HyperTransport command, or 0 if none available
+    cmd_needs_reply : out std_logic; --! set if the command needs a reply (reads, non-posted commands)
+    tag : out std_logic_vector(TAG_LEN - 1 downto 0); --! tag associated with current command, if any
+    addr : out std_logic_vector(ADDR_LEN - 1 downto 0); --! address associated with current command, if any
+    data : out std_logic_vector(31 downto 0) --! data associated with current command, if any
   );
 end entity;
 
