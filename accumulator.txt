@@ -143,7 +143,8 @@ Steps of the op_readfloat Operation
     Needs special-case for denormals and infinities.
 
 These steps are organized into clock cycles as follows:
-Clock 1: wait, since this could overlap with write-back from previous operation
+Clock 1: wait, since this could overlap with calculation from previous operation
+Clock 1a: wait if a write-back from a previous operation is pending
 Clock 2: 1)
 Clock 3: 2), 6)
 Clock 4: 2), 3)
