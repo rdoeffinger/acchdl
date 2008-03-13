@@ -1,5 +1,13 @@
 --! \file
 --! \brief simplify HyperTransport handling
+--!
+--! This module simplifies HyperTransport handling by merging the posted
+--! and non-posted queues into a single command queue, handling the
+--! data_complete signals, avoiding "empty" signals by generating nop
+--! commands instead and splitting multi-dword writes into multiple writes.
+--! It does not handle byte-size writes correctly yet.
+--! Ideally, it would also handle the response queue and e.g. split
+--! multi-dword reads into multiple reads and compose a single reply packet.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
