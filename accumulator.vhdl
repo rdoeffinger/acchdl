@@ -29,32 +29,52 @@ architecture behaviour of accumulator is
                    st_out_float_normal, st_out_float_denormal, st_out_float_inf);
 
   --! if set, round to nearest when reading a float value
+  --! \sa #get_roundmode
   signal round_nearest : std_logic;
   --! if round_nearest is not set, depending on this value round to positive or negative infinity when reading a float value
+  --! \sa #get_roundmode
   signal round_inf : std_logic;
   --! if set, invert meaning of round_inf for negative values (used to implement rounding to and away from 0)
+  --! \sa #get_roundmode
   signal round_sign : std_logic;
   --! main memory module, organized in NUMBLOCKS values of BLOCKBITS bits
+  --! \sa #write
   signal accu : accutype;
   --! if set to 1, all bits of corresponding block have the same value. allmask(NUMBLOCKS) if unset indicates overflow.
+  --! \sa #write_allmask
   signal allmask : flagtype;
   --! bit value of blocks where corresponding allmask is set. allvalue(NUMBLOCKS) if indicates sign.
+  --! \sa #write_allvalue
   signal allvalue : flagtype;
+  --! buffer for data_in port, also used for some simple transformations on the input data.
+  --! \sa #get_input
   signal input : addblock;
+  --! buffer for sign port
+  --! \sa #get_sign
   signal sig_sign : std_logic;
   --! number of next block to be processed, this one is currently being read
+  --! \sa #get_next_pos
   signal next_pos : integer range -4096 to 4095 := 0;
   --! number of read block, corresponding data is in read_block
+  --! \sa #set_read_pos
   signal read_pos : integer range -4096 to 4095 := 0;
   --! number of block to write, corresponding data is in write_block
+  --! \sa #set_write_pos
   signal write_pos : integer range -4096 to 4095;
   --! only if set to 1 data in write_block is valid and should be written
+  --! \sa #set_write_pos
   signal write_enable : std_logic_vector(0 downto 0);
+  --! data block corresponding to position #read_pos in accumulator
+  --! \sa #read
   signal read_block : subblock;
+  --! modified data block to be stored at position #write_pos in accumulator
+  --! \sa #set_write_block_carry
   signal write_block : subblock;
+  --! carry of last add/subtract block operation
+  --! \sa #set_write_block_carry
+  signal carry : unsigned(0 downto 0);
   signal state : state_t;
   signal out_buf : subblock;
-  signal carry : unsigned(0 downto 0);
   attribute clock_signal : string;
   attribute clock_signal of clock : signal is "yes";
   signal floatshift : natural range 0 to BLOCKSIZE-1;
@@ -85,6 +105,8 @@ begin
   data_out <= out_buf;
 
 --! \brief find the position where carry resolution must happen
+--! \retval #carry_pos
+--! \retval #carry_allvalue
 find_carry_pos : process(clock,reset)
   variable add : natural;
   variable tmp : flagtype;
@@ -116,6 +138,8 @@ begin
   end if;
 end process;
 
+--! \brief find lowest 32 bit block that is not all 0
+--! \retval #exact_pos
 find_exact_pos : process(clock,reset)
   variable tmp : flagtype;
   variable tmp2 : flagtype;
@@ -134,6 +158,7 @@ begin
   end if;
 end process;
 
+--! \retval #read_block
 read : process(clock,reset)
 variable small_pos : natural range 0 to NUMBLOCKS - 1;
 variable from_accu : subblock;
@@ -161,6 +186,7 @@ begin
   end if;
 end process;
 
+--! \retval #read_pos
 set_read_pos : process(clock,reset)
 begin
   if reset = '1' then
@@ -170,6 +196,7 @@ begin
   end if;
 end process;
 
+--! \retval #accu
 write : process(clock,reset)
 variable small_pos : natural range 0 to NUMBLOCKS - 1;
 begin
@@ -183,6 +210,7 @@ begin
   end if;
 end process;
 
+--! \retval #allmask
 write_allmask : process(clock,reset)
   variable replicate : subblock;
 begin
@@ -212,6 +240,7 @@ begin
   end if;
 end process;
 
+--! \retval #allvalue
 write_allvalue : process(clock,reset)
   variable tmp : flagtype;
 begin
@@ -240,6 +269,9 @@ begin
   end if;
 end process;
 
+--! \retval #read_offset
+--! \retval #write_offset
+--! \retval #write_offset_block
 set_offsets : process(clock,reset)
 begin
   if reset = '1' then
@@ -256,6 +288,8 @@ begin
   end if;
 end process;
 
+--! \retval #write_pos
+--! \retval #write_enable
 set_write_pos : process(clock,reset)
 begin
   if reset = '1' then
@@ -283,6 +317,8 @@ begin
   end if;
 end process;
 
+--! \retval #write_block
+--! \retval #carry
 set_write_block_carry : process(clock,reset)
   variable addtmp : unsigned(BLOCKSIZE downto 0);
 begin
@@ -430,6 +466,9 @@ begin
   end if;
 end process;
 
+--! \retval #round_nearest
+--! \retval #round_inf
+--! \retval #round_sign
 get_roundmode : process(clock,reset)
 begin
   if reset = '1' then
@@ -445,6 +484,7 @@ begin
   end if;
 end process;
 
+--! \retval #next_pos
 get_next_pos : process(clock,reset)
   variable i : integer;
   variable add : natural;
@@ -498,6 +538,8 @@ begin
   end if;
 end process;
 
+--! \retval #state
+--! \retval #ready_sig
 state_handling : process(clock,reset)
   variable next_state : state_t;
 begin
@@ -583,6 +625,7 @@ begin
   end if;
 end process;
 
+--! \retval #sig_sign
 get_sign : process(clock,reset)
 begin
   if reset = '1' then
@@ -598,6 +641,7 @@ begin
   end if;
 end process;
 
+--! \retval #input
 get_input : process(clock,reset)
   variable tmp : addblock;
 begin
