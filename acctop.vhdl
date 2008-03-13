@@ -1,3 +1,6 @@
+--! \file
+--! \brief toplevel module, contains no real funtionality besides connecting components
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
