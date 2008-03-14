@@ -8,7 +8,7 @@ entity ht_mmap_if is
   port(
     reset_n : in std_logic;
     clock : in std_logic;
-    UnitID : in std_logic_vector(4 downto 0);
+    UnitID : in std_logic_vector(4 downto 0); --! HyperTransport unit ID for read responses
 
     cmd_stop : out std_logic;
     cmd : in std_logic_vector(CMD_LEN - 1 downto 0);
@@ -41,24 +41,37 @@ alias response_cmd_out_unitid : std_logic_vector(5        - 1 downto 0) is respo
 alias response_cmd_out_tag    : std_logic_vector(TAG_LEN  - 1 downto 0) is response_cmd_out(TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
 alias response_cmd_out_format : std_logic_vector(3        - 1 downto 0) is response_cmd_out(95 downto 93);
 
+--! the number of bits for the register number, i.e. log2(number of registers)
 constant REGBITS : integer := 4;
+--! the number of registers calculated from REGBITS
 constant NUMREGS : integer := 2**REGBITS;
 type data_array_t is array(0 to NUMREGS-1) of addblock;
+--! array of data_in signals to ALUs
 signal data_in : data_array_t;
 type short_data_array_t is array(0 to NUMREGS-1) of subblock;
+--! array of data_out signals from ALUs
 signal data_out : short_data_array_t;
+--! array of ready signals from ALUs
 signal ready : std_logic_vector(NUMREGS-1 downto 0);
 type operation_array_t is array(0 to NUMREGS-1) of operation;
+--! array of op signals for ALUs
 signal op : operation_array_t;
+--! common reset signal for all ALUs, active high
 signal accreset : std_logic;
+--! array of sign signals of ALUs
 signal sign : std_logic_vector(NUMREGS-1 downto 0);
 type position_array_t is array(0 to NUMREGS-1) of position_t;
+--! array of pos signals of ALUs
 signal pos : position_array_t;
 type state_t is (START, READ_WAIT, READ_WAIT2, READ_WAIT3, READ_WAIT4);
+--! state machine for handling reads
 signal state : state_t;
+--! register on which the read is pending if state /= START
 signal read_reg : natural range 0 to NUMREGS - 1;
+--! register part of command address (starting from addr(10)) as integer
 signal cmd_reg : integer range 0 to NUMREGS - 1;
 
+  --! determine if the given command has data attached
   function needs_data(cmd : in std_logic_vector(CMD_LEN - 1 downto 0)) return boolean is
     variable res : boolean;
   begin
@@ -67,6 +80,7 @@ signal cmd_reg : integer range 0 to NUMREGS - 1;
     res := res or cmd = "111101"; -- atomic read-modify-write
     return res;
   end;
+  --! determine if the response to this command needs data, otherwise it only needs a target done
   function respond_data(cmd : in std_logic_vector(CMD_LEN - 1 downto 0)) return boolean is
     variable res : boolean;
   begin
@@ -97,6 +111,8 @@ begin
 
   cmd_reg <= to_integer(unsigned(addr(10 + REGBITS - 1 downto 10)));
 
+  --! \retval #response_cmd_put
+  --! \retval #response_data_put
   handle_reply : process(clock,reset_n)
     variable put_data : std_logic;
   begin
@@ -128,6 +144,7 @@ begin
     end if;
   end process;
 
+  --! \retval #state
   set_state : process(clock,reset_n)
   begin
     if reset_n = '0' then
@@ -149,6 +166,7 @@ begin
     end if;
   end process;
 
+  --! \retval #read_reg
   set_read_reg : process(clock,reset_n)
   begin
     if reset_n = '0' then
@@ -160,6 +178,7 @@ begin
     end if;
   end process;
 
+  --! \retval #cmd_stop
   set_stop : process(clock,reset_n)
   begin
     if reset_n = '0' then
@@ -173,6 +192,9 @@ begin
     end if;
   end process;
 
+  --! \retval #data_in
+  --! \retval #pos
+  --! \retval #sign
   set_simplestuff : process(clock,reset_n)
   begin
     if reset_n = '0' then
@@ -186,6 +208,7 @@ begin
     end if;
   end process;
 
+  --! \retval #op
   set_op : process(clock,reset_n)
   begin
     if reset_n = '0' then
