@@ -45,15 +45,6 @@ entity ht_simplify is
 end entity;
 
 architecture behaviour of ht_simplify is
-constant CMD_OFFSET  : integer :=  0;
-constant CMD_LEN     : integer :=  6;
-constant TAG_OFFSET  : integer := 16;
-constant TAG_LEN     : integer :=  5;
-constant COUNT_OFFSET: integer := 22;
-constant COUNT_LEN   : integer :=  4;
-constant ADDR_OFFSET : integer := 26;
-constant ADDR_LEN    : integer := 62;
-
 alias posted_cmd_in_cmd       : std_logic_vector(CMD_LEN  - 1 downto 0) is posted_cmd_in(   CMD_OFFSET  + CMD_LEN  - 1 downto CMD_OFFSET);
 alias posted_cmd_in_tag       : std_logic_vector(TAG_LEN  - 1 downto 0) is posted_cmd_in(   TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
 alias posted_cmd_in_count     : std_logic_vector(COUNT_LEN- 1 downto 0) is posted_cmd_in( COUNT_OFFSET  + COUNT_LEN- 1 downto COUNT_OFFSET);

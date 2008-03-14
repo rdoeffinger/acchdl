@@ -27,15 +27,6 @@ entity ht_mmap_if is
 end entity;
 
 architecture behaviour of ht_mmap_if is
-constant CMD_OFFSET  : integer :=  0;
-constant CMD_LEN     : integer :=  6;
-constant TAG_OFFSET  : integer := 16;
-constant TAG_LEN     : integer :=  5;
-constant COUNT_OFFSET: integer := 22;
-constant COUNT_LEN   : integer :=  4;
-constant ADDR_OFFSET : integer := 26;
-constant ADDR_LEN    : integer := 62;
-
 alias response_cmd_out_cmd    : std_logic_vector(CMD_LEN  - 1 downto 0) is response_cmd_out(CMD_OFFSET  + CMD_LEN  - 1 downto CMD_OFFSET);
 alias response_cmd_out_unitid : std_logic_vector(5        - 1 downto 0) is response_cmd_out(12 downto 8);
 alias response_cmd_out_tag    : std_logic_vector(TAG_LEN  - 1 downto 0) is response_cmd_out(TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
