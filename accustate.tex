@@ -1,0 +1,54 @@
+\begin{tikzpicture}
+  \tikzstyle{every node}=[draw,shape=ellipse]
+  \tikzstyle{op}=[midway,draw=none,sloped,anchor=base]
+  \node[shape=rectangle, minimum width=11.5cm, minimum height=7cm] (finals) at (-3mm,1cm) {};
+  \newcommand{\dist}{2cm}
+  \node (ready)              at (0cm, 0mm)     {st\_ready};
+  \node (fixcarry)           at (-25:30mm)     {st\_fixcarry};
+  \node (out_block1)         at ( -5:36mm)     {st\_out\_block1};
+  \node (in_block)           at ( 15:34mm)     {st\_in\_block};
+  \node (out_ofs)            at ( 35:30mm)     {st\_out\_ofs};
+  \node (in_ofs)             at ( 90:20mm)     {st\_in\_ofs};
+  \node (out_status)         at (145:30mm)     {st\_out\_status};
+  \node (in_status)          at (165:34mm)     {st\_in\_status};
+  \node (out_float_normal)   at (185:36mm)     {st\_out\_float\_normal};
+  \node (out_float_denormal) at (205:30mm)     {st\_out\_float\_denormal};
+  \node (out_float_inf)      at (270:20mm)     {st\_out\_float\_inf};
+  \foreach \src in {fixcarry,out_block1,in_block,out_ofs,in_ofs,out_status,in_status,
+                    out_float_normal,out_float_denormal,out_float_inf}{
+    \draw[->] (\src) -- (ready)                node[op] {\small $op\_nop$};
+  }
+% state transitions inside "final" states
+  \draw[->] (finals.north east) -- (in_block.east)        node[op] {\small $op\_writeblock$};
+  \draw[->] (finals.north east) -- (out_ofs.north)        node[op] {\small $op\_readoffsets$};
+  \draw[->] (finals.north east) -- (in_ofs.north)         node[op] {\small $op\_writeoffsets$};
+  \draw[->] (finals.north west) -- (out_status.north)     node[op] {\small $op\_readflags$};
+  \draw[->] (finals.north west) -- (in_status.west)       node[op] {\small $op\_writeflags$};
+% non-"final" states and transitions
+  \node (out_block0)         at ( 43mm, 50mm)  {st\_out\_block0};
+  \draw[->] (finals.north) -- (out_block0)     node[op] {\small $op\_readblock$};
+  \draw[->] (out_block0.east) |- (out_block1);
+  \node (add0)               at ( 40mm,-40mm)  {st\_add0};
+  \draw[->] (finals) -- (add0)                 node[op] {\small $op\_add$};
+  \node (in_float0)          at ( 20mm,-45mm)  {st\_in\_float0};
+  \draw[->] (finals) -- (in_float0)            node[op] {\small $op\_floatadd$};
+  \node (add1)               at ( 45mm,-50mm)  {st\_add1};
+  \draw[->] (add0) -- (add1);
+  \draw[->] (in_float0) -- (add1);
+  \node (add2)               at ( 50mm,-30mm)  {st\_add2};
+  \draw[->] (add1.east) -- (add2);
+  \draw[->] (add2.east) |- (fixcarry);
+  \node (out_float0)         at (  4mm,-55mm)  {st\_out\_float0};
+  \node (out_float1)         at (-50mm,-60mm)  {st\_out\_float1};
+  \node (out_float2)         at (-50mm,-50mm)  {st\_out\_float2};
+  \node (out_float3)         at (-45mm,-40mm)  {st\_out\_float3};
+  \node (out_float4)         at (-40mm,-30mm)  {st\_out\_float4};
+  \draw[->] (finals) -- (out_float0)           node[op] {\small $op\_readfloat$};
+  \draw[->] (out_float0) -- (out_float1)       node[op] {\small not $write\_enable$};
+  \draw[->] (out_float1) -- (out_float2);
+  \draw[->] (out_float2) -- (out_float3);
+  \draw[->] (out_float3) -- (out_float4);
+  \draw[->] (out_float4) -- (out_float_normal.west) node[op,below=-1mm] {\small $-126 \le e \le 127$};
+  \draw[->] (out_float4) -- (out_float_denormal.south) node[op] {\small $e < -126$};
+  \draw[->] (out_float4) -- (out_float_inf.west) node[op] {\small $e > 127$};
+\end{tikzpicture}
