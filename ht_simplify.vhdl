@@ -114,13 +114,6 @@ signal np_done : unsigned(COUNT_LEN - 1 downto 0);
     res := res or cmd = "111101"; -- atomic read-modify-write
     return res;
   end;
-  function respond_data(cmd : in std_logic_vector(CMD_LEN - 1 downto 0)) return boolean is
-    variable res : boolean;
-  begin
-    res := cmd(5 downto 4) = "01"; -- read request
-    res := res or cmd = "111101"; -- atomic read-modify-write
-    return res;
-  end;
 
 begin
   cmd <= last_cmd when cmd_stop = '1' else new_cmd;
