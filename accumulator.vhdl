@@ -35,49 +35,49 @@ architecture behaviour of accumulator is
                    st_out_float4,
                    st_out_float_normal, st_out_float_denormal, st_out_float_inf);
 
-  --! if set, round to nearest when reading a float value
+  --! \brief if set, round to nearest when reading a float value
   --! \sa #get_roundmode
   signal round_nearest : std_logic;
-  --! if round_nearest is not set, depending on this value round to positive or negative infinity when reading a float value
+  --! \brief if round_nearest is not set, depending on this value round to positive or negative infinity when reading a float value
   --! \sa #get_roundmode
   signal round_inf : std_logic;
-  --! if set, invert meaning of round_inf for negative values (used to implement rounding to and away from 0)
+  --! \brief if set, invert meaning of round_inf for negative values (used to implement rounding to and away from 0)
   --! \sa #get_roundmode
   signal round_sign : std_logic;
-  --! main memory module, organized in NUMBLOCKS values of BLOCKBITS bits
+  --! \brief main memory module, organized in NUMBLOCKS values of BLOCKBITS bits
   --! \sa #write
   signal accu : accutype;
-  --! if set to 1, all bits of corresponding block have the same value. allmask(NUMBLOCKS) if unset indicates overflow.
+  --! \brief if set to 1, all bits of corresponding block have the same value. allmask(NUMBLOCKS) if unset indicates overflow.
   --! \sa #write_allmask
   signal allmask : flagtype;
-  --! bit value of blocks where corresponding allmask is set. allvalue(NUMBLOCKS) if indicates sign.
+  --! \brief bit value of blocks where corresponding allmask is set. allvalue(NUMBLOCKS) if indicates sign.
   --! \sa #write_allvalue
   signal allvalue : flagtype;
-  --! buffer for data_in port, also used for some simple transformations on the input data.
+  --! \brief buffer for data_in port, also used for some simple transformations on the input data.
   --! \sa #get_input
   signal input : addblock;
-  --! buffer for sign port
+  --! \brief buffer for sign port
   --! \sa #get_sign
   signal sig_sign : std_logic;
-  --! number of next block to be processed, this one is currently being read
+  --! \brief number of next block to be processed, this one is currently being read
   --! \sa #get_next_pos
   signal next_pos : integer range -4096 to 4095 := 0;
-  --! number of read block, corresponding data is in read_block
+  --! \brief number of read block, corresponding data is in read_block
   --! \sa #set_read_pos
   signal read_pos : integer range -4096 to 4095 := 0;
-  --! number of block to write, corresponding data is in write_block
+  --! \brief number of block to write, corresponding data is in write_block
   --! \sa #set_write_pos
   signal write_pos : integer range -4096 to 4095;
-  --! only if set to 1 data in write_block is valid and should be written
+  --! \brief only if set to 1 data in write_block is valid and should be written
   --! \sa #set_write_pos
   signal write_enable : std_logic_vector(0 downto 0);
-  --! data block corresponding to position #read_pos in accumulator
+  --! \brief data block corresponding to position #read_pos in accumulator
   --! \sa #read
   signal read_block : subblock;
-  --! modified data block to be stored at position #write_pos in accumulator
+  --! \brief modified data block to be stored at position #write_pos in accumulator
   --! \sa #set_write_block_carry
   signal write_block : subblock;
-  --! carry of last add/subtract block operation
+  --! \brief carry of last add/subtract block operation
   --! \sa #set_write_block_carry
   signal carry : unsigned(0 downto 0);
   signal state : state_t;
@@ -165,7 +165,13 @@ begin
   end if;
 end process;
 
+--! \brief reads block indicated by next_pos
 --! \retval #read_block
+--!
+--! Cases where next_pos is outside the range actually
+--! backed by #accu memory, the value is sign-extended,
+--! i.e. reads below return all-0 blocks, reads above
+--! all-0 or all-1 depending on sign.
 read : process(clock,reset)
 variable small_pos : natural range 0 to NUMBLOCKS - 1;
 variable from_accu : subblock;
@@ -276,6 +282,7 @@ begin
   end if;
 end process;
 
+--! \brief handles setting the float exponent offsets according to #input
 --! \retval #read_offset
 --! \retval #write_offset
 --! \retval #write_offset_block
@@ -295,6 +302,7 @@ begin
   end if;
 end process;
 
+--! \brief decides where and if at all a block will be written
 --! \retval #write_pos
 --! \retval #write_enable
 set_write_pos : process(clock,reset)
@@ -473,6 +481,7 @@ begin
   end if;
 end process;
 
+--! \brief parse #pos input into the three rounding-mode signals
 --! \retval #round_nearest
 --! \retval #round_inf
 --! \retval #round_sign
@@ -545,8 +554,12 @@ begin
   end if;
 end process;
 
+--! \brief Handles the state machine.
 --! \retval #state
 --! \retval #ready_sig
+--!
+--! This also sets #ready_sig depending on whether we are
+--! in one of the "final" states or not.
 state_handling : process(clock,reset)
   variable next_state : state_t;
 begin
@@ -632,6 +645,7 @@ begin
   end if;
 end process;
 
+--! \brief get the sign for an operation
 --! \retval #sig_sign
 get_sign : process(clock,reset)
 begin
