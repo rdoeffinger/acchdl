@@ -1,8 +1,13 @@
+--! \file
+--! \brief component declaration for ht_simplify module
+--! \author Reimar Döffinger
+--! \date 2007,2008
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.ht_constants.all;
 
+--! package for component declaration of ht_simplify
 package ht_simplify_types is
 component ht_simplify is
   port(

@@ -1,7 +1,12 @@
+--! \file
+--! \brief declarations of some HyperTransport-related constants
+--! \author Reimar Döffinger
+--! \date 2007,2008
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--! package containing some commonly-used HyperTransport-related constants
 package ht_constants is
 constant CMD_OFFSET  : integer :=  0;
 constant CMD_LEN     : integer :=  6;

@@ -1,7 +1,12 @@
+--! \file
+--! \brief accumulator component and related types and constants
+--! \author Reimar Döffinger
+--! \date 2007,2008
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--! package declaring the accumulator ALU component and related types and constants
 package accumulator_types is
   constant BLOCKSIZE : integer := 32;
   constant BLOCKBITS : integer := 5;

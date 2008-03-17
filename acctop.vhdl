@@ -1,5 +1,7 @@
 --! \file
 --! \brief toplevel module, contains no real funtionality besides connecting components
+--! \author Reimar Döffinger
+--! \date 2007,2008
 
 library ieee;
 use ieee.std_logic_1164.all;

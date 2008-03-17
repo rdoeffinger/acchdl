@@ -1,3 +1,7 @@
+--! \file
+--! \brief small testbench for ALU code
+--! \author Reimar Döffinger
+--! \date 2007,2008
 library ieee;
 use ieee.std_logic_1164.all;
 use work.accumulator_types.all;
