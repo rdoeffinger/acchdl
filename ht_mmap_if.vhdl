@@ -32,12 +32,13 @@ alias response_cmd_out_unitid : std_logic_vector(5        - 1 downto 0) is respo
 alias response_cmd_out_tag    : std_logic_vector(TAG_LEN  - 1 downto 0) is response_cmd_out(TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
 alias response_cmd_out_format : std_logic_vector(3        - 1 downto 0) is response_cmd_out(95 downto 93);
 
---! the number of bits for the register number, i.e. log2(number of registers)
+--! the number of bits for the ALU number, i.e. log2(number of ALUs)
 constant REGBITS : integer := 4;
---! the number of registers calculated from REGBITS
+--! the number of ALUs calculated from REGBITS
 constant NUMREGS : integer := 2**REGBITS;
 type data_array_t is array(0 to NUMREGS-1) of addblock;
 --! array of data_in signals to ALUs
+--! \sa #set_simplestuff
 signal data_in : data_array_t;
 type short_data_array_t is array(0 to NUMREGS-1) of subblock;
 --! array of data_out signals from ALUs
@@ -46,20 +47,32 @@ signal data_out : short_data_array_t;
 signal ready : std_logic_vector(NUMREGS-1 downto 0);
 type operation_array_t is array(0 to NUMREGS-1) of operation;
 --! array of op signals for ALUs
+--! \sa #set_op
 signal op : operation_array_t;
 --! common reset signal for all ALUs, active high
 signal accreset : std_logic;
 --! array of sign signals of ALUs
+--! \sa #set_simplestuff
 signal sign : std_logic_vector(NUMREGS-1 downto 0);
 type position_array_t is array(0 to NUMREGS-1) of position_t;
 --! array of pos signals of ALUs
+--! \sa #set_simplestuff
 signal pos : position_array_t;
+--! states for read processing
+--!
+--! START: no read active
+--! READ_WAIT : wait for ALU to start processing of read, signalled by ready = '1'
+--! READ_WAIT2: wait for processing of read by ALU to finish, signalled by ready = '1'
+--! READ_WAIT3: read result from data_out
+--! READ_WAIT4: wait for space in response queue
 type state_t is (START, READ_WAIT, READ_WAIT2, READ_WAIT3, READ_WAIT4);
 --! state machine for handling reads
+--! \sa #set_state
 signal state : state_t;
---! register on which the read is pending if state /= START
+--! ALU on which the read is pending if state /= START
+--! \sa #set_read_reg
 signal read_reg : natural range 0 to NUMREGS - 1;
---! register part of command address (starting from addr(10)) as integer
+--! ALU number part of command address (starting from addr(10)) as integer
 signal cmd_reg : integer range 0 to NUMREGS - 1;
 
   --! determine if the given command has data attached
@@ -102,7 +115,9 @@ begin
 
   cmd_reg <= to_integer(unsigned(addr(10 + REGBITS - 1 downto 10)));
 
+  --! \retval #response_cmd_out
   --! \retval #response_cmd_put
+  --! \retval #response_data_out
   --! \retval #response_data_put
   handle_reply : process(clock,reset_n)
     variable put_data : std_logic;
@@ -135,6 +150,9 @@ begin
     end if;
   end process;
 
+  --! handling of simple state machine, START -> READ_WAIT -> READ_WAIT2 -> READ_WAIT3 -> READ_WAIT4 -> START
+  --! for reads (requiring read_response with data) and START -> READ_WAIT4 -> START if a simple target_done
+  --! response is sufficient
   --! \retval #state
   set_state : process(clock,reset_n)
   begin
@@ -157,6 +175,7 @@ begin
     end if;
   end process;
 
+  --! if we start a read, copy the ALU number where this read happens to #read_reg
   --! \retval #read_reg
   set_read_reg : process(clock,reset_n)
   begin
@@ -169,6 +188,10 @@ begin
     end if;
   end process;
 
+  --! set cmd_stop to 1 if the ALU addressed by the current command has not
+  --! yet finished processing the previous command or if we are waiting for
+  --! a read to finish (the later is unnecessary in most cases though, so this
+  --! could be optimized)
   --! \retval #cmd_stop
   set_stop : process(clock,reset_n)
   begin
@@ -183,6 +206,7 @@ begin
     end if;
   end process;
 
+  --! sets the ALU inputs that need (almost) no processing
   --! \retval #data_in
   --! \retval #pos
   --! \retval #sign
@@ -199,6 +223,8 @@ begin
     end if;
   end process;
 
+  --! set ALU operation based on command and address.
+  --! if an ALU finished a command and there is no new command available to it, set it to op_nop.
   --! \retval #op
   set_op : process(clock,reset_n)
   begin
