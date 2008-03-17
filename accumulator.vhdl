@@ -10,13 +10,17 @@ use work.accumulator_types.all;
 --! the core ALU module
 entity accumulator is
   port (
-    ready : out std_logic;
-    reset : in std_logic;
-    clock : in std_logic;
-    sign : in std_logic;
-    data_in : in addblock;
+    ready : out std_logic; --! set to one during the cycle where command processing starts
+    reset : in std_logic; --! reset ALU, active high
+    clock : in std_logic; --! ALU clock, sensitive to rising edge
+    sign : in std_logic; --! select between addition/subtraction
+    data_in : in addblock; --! input data for operation
+    --! \brief result of read operation
+    --!
+    --! This is valid one cycle after processing of the command following the
+    --! read command started (as indicated by the #ready signal).
     data_out : out subblock;
-    pos : in position_t;
+    pos : in position_t; --! block position/rounding mode selection
     op : in operation  --! next operation to execute
   );
 end accumulator;

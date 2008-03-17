@@ -43,28 +43,28 @@ constant REGBITS : integer := 4;
 --! the number of ALUs calculated from REGBITS
 constant NUMREGS : integer := 2**REGBITS;
 type data_array_t is array(0 to NUMREGS-1) of addblock;
---! array of data_in signals to ALUs
+--! \brief array of accumulator::data_in signals to ALUs
 --! \sa #set_simplestuff
 signal data_in : data_array_t;
 type short_data_array_t is array(0 to NUMREGS-1) of subblock;
---! array of data_out signals from ALUs
+--! array of accumulator::data_out signals from ALUs
 signal data_out : short_data_array_t;
---! array of ready signals from ALUs
+--! array of accumulator::ready signals from ALUs
 signal ready : std_logic_vector(NUMREGS-1 downto 0);
 type operation_array_t is array(0 to NUMREGS-1) of operation;
---! array of op signals for ALUs
+--! \brief array of accumulator::op signals for ALUs
 --! \sa #set_op
 signal op : operation_array_t;
 --! common reset signal for all ALUs, active high
 signal accreset : std_logic;
---! array of sign signals of ALUs
+--! \brief array of accumulator::sign signals of ALUs
 --! \sa #set_simplestuff
 signal sign : std_logic_vector(NUMREGS-1 downto 0);
 type position_array_t is array(0 to NUMREGS-1) of position_t;
---! array of pos signals of ALUs
+--! \brief array of accumulator::pos signals of ALUs
 --! \sa #set_simplestuff
 signal pos : position_array_t;
---! states for read processing
+--! \brief states for read processing
 --!
 --! START: no read active
 --! READ_WAIT : wait for ALU to start processing of read, signalled by ready = '1'
@@ -72,10 +72,10 @@ signal pos : position_array_t;
 --! READ_WAIT3: read result from data_out
 --! READ_WAIT4: wait for space in response queue
 type state_t is (START, READ_WAIT, READ_WAIT2, READ_WAIT3, READ_WAIT4);
---! state machine for handling reads
+--! \brief state machine for handling reads
 --! \sa #set_state
 signal state : state_t;
---! ALU on which the read is pending if state /= START
+--! \brief ALU on which the read is pending if state /= START
 --! \sa #set_read_reg
 signal read_reg : natural range 0 to NUMREGS - 1;
 --! ALU number part of command address (starting from addr(10)) as integer
@@ -101,7 +101,7 @@ signal cmd_reg : integer range 0 to NUMREGS - 1;
 
 begin
   ALUs : for I in 0 to NUMREGS-1 generate
-  accumulator port map (
+  ALUinst : accumulator port map (
     ready => ready(I),
     reset => accreset,
     clock => clock,

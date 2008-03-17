@@ -19,6 +19,8 @@ use work.ht_constants.all;
 --! multi-dword reads into multiple reads and compose a single reply packet.
 entity ht_simplify is
   port(
+--! \name Ports connected directly to HT core
+--! \{
     reset_n : in std_logic;
     clock : in std_logic;
 
@@ -37,6 +39,7 @@ entity ht_simplify is
     posted_cmd_get : out std_logic;
     posted_data_get : out std_logic;
     posted_data_complete : out std_logic;
+--! \}
 
     cmd_stop : in std_logic; --! if set, output the same command during the next cycle
     cmd : out std_logic_vector(CMD_LEN - 1 downto 0); --! current HyperTransport command, or 0 if none available
@@ -107,7 +110,7 @@ signal np_cmd_stop : std_logic;
 signal np_data_stop : std_logic;
 signal np_done : unsigned(COUNT_LEN - 1 downto 0);
 
-  --! determine if a give HT command has data attached
+  --! determine if a given HT command has data attached
   function needs_data(cmd : in std_logic_vector(CMD_LEN - 1 downto 0)) return boolean is
     variable res : boolean;
   begin
