@@ -4,9 +4,9 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ht_simplify_types.all;
-use ht_mmap_if_types.all;
-use ht_constants.all;
+use work.ht_simplify_types.all;
+use work.ht_mmap_if_types.all;
+use work.ht_constants.all;
 
 --! toplevel module, ports are the actual HyperTransport signal links
 entity acctop is

@@ -1,6 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
-use ht_mmap_if_types.all;
+use work.ht_mmap_if_types.all;
 
 entity test_ht_mmap_if is
 end test_ht_mmap_if;

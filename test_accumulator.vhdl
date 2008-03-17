@@ -1,6 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
-use accumulator_types.all;
+use work.accumulator_types.all;
 
 entity test_accumulator is
 end test_accumulator;

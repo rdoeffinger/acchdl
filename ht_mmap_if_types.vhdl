@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ht_constants.all;
+use work.ht_constants.all;
 
 package ht_mmap_if_types is
 component ht_mmap_if is

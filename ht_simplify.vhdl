@@ -3,8 +3,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use accumulator_types.all;
-use ht_constants.all;
+use work.accumulator_types.all;
+use work.ht_constants.all;
 
 --! \brief module to simplify handling of HyperTransport posted and nonposted queues.
 --!
