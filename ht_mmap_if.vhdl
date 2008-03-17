@@ -96,8 +96,8 @@ signal cmd_reg : integer range 0 to NUMREGS - 1;
   end;
 
 begin
-  regs : for I in 0 to NUMREGS-1 generate
-  reg0 : accumulator port map (
+  ALUs : for I in 0 to NUMREGS-1 generate
+  accumulator port map (
     ready => ready(I),
     reset => accreset,
     clock => clock,
