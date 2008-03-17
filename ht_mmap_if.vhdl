@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 use accumulator_types.all;
 use ht_constants.all;
 
+--! the HyperTransport memory-mapped interface for the core ALUs
 entity ht_mmap_if is
   port(
     reset_n : in std_logic;
@@ -26,6 +27,7 @@ entity ht_mmap_if is
   );
 end entity;
 
+--! implementation of the HyperTransport memory-mapped interface
 architecture behaviour of ht_mmap_if is
 alias response_cmd_out_cmd    : std_logic_vector(CMD_LEN  - 1 downto 0) is response_cmd_out(CMD_OFFSET  + CMD_LEN  - 1 downto CMD_OFFSET);
 alias response_cmd_out_unitid : std_logic_vector(5        - 1 downto 0) is response_cmd_out(12 downto 8);

@@ -8,7 +8,11 @@ use ht_simplify_types.all;
 use ht_mmap_if_types.all;
 use ht_constants.all;
 
+--! toplevel module, ports are the actual HyperTransport signal links
 entity acctop is
+--! \name Ports corresponding to HyperTransport signals
+--! \brief HyperTransport signal links as described in the specification
+--! \{
   port(
     HTX_PWROK : in std_logic;
     HTX_RES_N : in std_logic;
@@ -32,8 +36,10 @@ entity acctop is
     HTX_CLKOUT1H : out std_logic;
     HTX_CLKOUT1L : out std_logic
   );
+--! \}
 end entity;
 
+--! implementation of toplevel connections between modules
 architecture behaviour of acctop is
   component htxtop is
     port (
@@ -112,6 +118,9 @@ architecture behaviour of acctop is
       internal_reset : out std_logic_vector(31 downto 0)
     );
   end component;
+--! \name HyperTransport core signals
+--! \brief signals connected to the application-side of the HyperTransport core
+--! \{
 signal nonposted_cmd_in : std_logic_vector(95 downto 0);
 signal nonposted_data_in : std_logic_vector(63 downto 0);
 signal nonposted_cmd_empty : std_logic;
@@ -140,13 +149,6 @@ signal posted_cmd_put : std_logic;
 signal posted_data_put : std_logic;
 signal posted_data_complete : std_logic;
 
-signal cmd_stop : std_logic;
-signal cmd : std_logic_vector(CMD_LEN - 1 downto 0);
-signal cmd_needs_reply : std_logic;
-signal tag : std_logic_vector(TAG_LEN - 1 downto 0);
-signal addr : std_logic_vector(ADDR_LEN - 1 downto 0);
-signal data : std_logic_vector(31 downto 0);
-
 signal response_cmd_in : std_logic_vector(95 downto 0);
 signal response_data_in : std_logic_vector(63 downto 0);
 signal response_cmd_empty : std_logic;
@@ -166,8 +168,21 @@ attribute clock_signal : string;
 attribute clock_signal of clock : signal is "yes";
 signal reset_n : std_logic;
 signal UnitID : std_logic_vector(4 downto 0);
+--! \}
+
+--! \name HyperTransport simplifier signals
+--! \brief signals providing the simplified HyperTransport interface of ht_simplify
+--! \{
+signal cmd_stop : std_logic;
+signal cmd : std_logic_vector(CMD_LEN - 1 downto 0);
+signal cmd_needs_reply : std_logic;
+signal tag : std_logic_vector(TAG_LEN - 1 downto 0);
+signal addr : std_logic_vector(ADDR_LEN - 1 downto 0);
+signal data : std_logic_vector(31 downto 0);
+--! \}
 
 begin
+  --! simplification layer for HyperTransport posted-/nonposted queues
   simplify : ht_simplify port map (
     reset_n => reset_n,
     clock => clock,
@@ -195,6 +210,7 @@ begin
     addr => addr,
     data => data
   );
+  --! memory-mapping interface containing the ALUs
   interface : ht_mmap_if port map (
     reset_n => reset_n,
     clock => clock,
@@ -214,6 +230,7 @@ begin
     response_cmd_put => response_cmd_put,
     response_data_put => response_data_put
   );
+  --! the HyperTransport core
   core : htxtop port map (
     PWROK            => HTX_PWROK     ,
     RESET_N          => HTX_RES_N     ,

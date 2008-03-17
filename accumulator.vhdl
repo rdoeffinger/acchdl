@@ -1,11 +1,12 @@
 --! \file
---! \brief implementation of the core ALU module
+--! \brief contains implementation of the core ALU module
 
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.accumulator_types.all;
 
+--! the core ALU module
 entity accumulator is
   port (
     ready : out std_logic;
@@ -19,6 +20,7 @@ entity accumulator is
   );
 end accumulator;
 
+--! implementation of the core ALU module
 architecture behaviour of accumulator is
   --! internal state machine, used in a way similar to microcode
   type state_t is (st_ready, st_in_float0, st_add0, st_add1, st_add2, st_fixcarry,

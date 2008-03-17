@@ -1,5 +1,12 @@
 --! \file
---! \brief simplify HyperTransport handling
+--! \brief code to simplify HyperTransport handling
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use accumulator_types.all;
+use ht_constants.all;
+
+--! \brief module to simplify handling of HyperTransport posted and nonposted queues.
 --!
 --! This module simplifies HyperTransport handling by merging the posted
 --! and non-posted queues into a single command queue, handling the
@@ -8,12 +15,6 @@
 --! It does not handle byte-size writes correctly yet.
 --! Ideally, it would also handle the response queue and e.g. split
 --! multi-dword reads into multiple reads and compose a single reply packet.
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
-use accumulator_types.all;
-use ht_constants.all;
-
 entity ht_simplify is
   port(
     reset_n : in std_logic;
@@ -44,6 +45,7 @@ entity ht_simplify is
   );
 end entity;
 
+--! actual implementation of the ht_simplify module
 architecture behaviour of ht_simplify is
 alias posted_cmd_in_cmd       : std_logic_vector(CMD_LEN  - 1 downto 0) is posted_cmd_in(   CMD_OFFSET  + CMD_LEN  - 1 downto CMD_OFFSET);
 alias posted_cmd_in_tag       : std_logic_vector(TAG_LEN  - 1 downto 0) is posted_cmd_in(   TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
@@ -103,6 +105,7 @@ signal np_cmd_stop : std_logic;
 signal np_data_stop : std_logic;
 signal np_done : unsigned(COUNT_LEN - 1 downto 0);
 
+  --! determine if a give HT command has data attached
   function needs_data(cmd : in std_logic_vector(CMD_LEN - 1 downto 0)) return boolean is
     variable res : boolean;
   begin
