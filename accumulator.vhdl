@@ -38,10 +38,10 @@ architecture behaviour of accumulator is
   --! \brief if set, round to nearest when reading a float value
   --! \sa #get_roundmode
   signal round_nearest : std_logic;
-  --! \brief if round_nearest is not set, depending on this value round to positive or negative infinity when reading a float value
+  --! \brief if round_nearest is not set, depending on this value round to or away from 0 when reading a float value
   --! \sa #get_roundmode
   signal round_inf : std_logic;
-  --! \brief if set, invert meaning of round_inf for negative values (used to implement rounding to and away from 0)
+  --! \brief if set, invert meaning of round_inf for negative values (used to implement rounding up/down)
   --! \sa #get_roundmode
   signal round_sign : std_logic;
   --! \brief main memory module, organized in NUMBLOCKS values of BLOCKBITS bits
