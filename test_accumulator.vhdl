@@ -41,7 +41,7 @@ architecture behaviour of test_accumulator is
 
   type datas_t is array (0 to NUMTESTS - 1) of addblock;
   constant datas : datas_t := (
-    (others => 'Z'), X"000000003f800000", X"0000000040200000", X"00000000c0a00000", (others => '1'),
+    (others => '0'), X"000000003f800000", X"0000000040200000", X"00000000c0a00000", (others => '1'),
     X"0000000000040004",
     X"00000000457a0000", X"00000000c3960000", X"00000000c3960000", (others => '1'),
     X"0000000000040004",
@@ -55,7 +55,7 @@ architecture behaviour of test_accumulator is
     X"0000000000040004",
     X"0000000014800000", X"0000000080000001", (others => '1'), (others => '1'),
     X"0000000000040004",
-    X"0123456789abcdef", X"19acdefffffff000", (others => '1'), (others => 'Z'), (others => 'Z')
+    X"0123456789abcdef", X"19acdefffffff000", (others => '1'), (others => '0'), (others => '0')
   );
 
   constant pos0 : position_t := "000000000";
