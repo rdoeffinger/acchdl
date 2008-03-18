@@ -84,16 +84,27 @@ architecture behaviour of accumulator is
   signal out_buf : subblock;
   attribute clock_signal : string;
   attribute clock_signal of clock : signal is "yes";
+  --! \brief indicates how much left-shifting is needed so that leftmost bit is set/unset (depending on sign)
+  --! \sa #calc_floatshift
   signal floatshift : natural range 0 to BLOCKSIZE-1;
   signal limited_read_pos : natural range 0 to NUMBLOCKS;
   signal exp : integer range -65536 to 65535;
   signal read_offset : integer range -32768 to 32767;
   signal write_offset : integer range -32768 to 32767;
   signal write_offset_block : integer range -65536 to 65535;
+  --! \brief how much left shifting is needed so that input float value is block-aligned
+  --! \sa #get_input_shift
   signal shift_cnt : natural range 0 to BLOCKSIZE-1;
   signal ready_sig : std_logic;
+  --! \brief block number where carry resolution must happen
+  --! \sa #find_carry_pos
+  --! \sa #get_next_pos
   signal carry_pos : natural range 0 to NUMBLOCKS-1;
+  --! \brief bit-mask indicating which #allvalue bits must be flipped for carry resolution
+  --! \sa #find_carry_pos
   signal carry_allvalue : flagtype;
+  --! \brief number of first non-zero block
+  --! \sa #find_exact_pos
   signal exact_pos : natural range 0 to NUMBLOCKS;
   --! return number of highest set bit
   function maxbit(v: subblock) return integer is
@@ -695,6 +706,17 @@ begin
   end if;
 end process;
 
+--! \brief find how much to shift input float to get a block aligned value
+--! \sa #shift_cnt
+get_input_shift : process(clock,reset)
+begin
+  if reset = '1' then
+    null;
+  elsif rising_edge(clock) then
+    shift_cnt <= (to_integer(unsigned(data_in(27 downto 23))) + write_offset) mod BLOCKSIZE;
+  end if;
+end process;
+
 --! \retval #input
 get_input : process(clock,reset)
   variable tmp : addblock;
@@ -706,7 +728,6 @@ begin
       if op = op_add and sign = '1' then
         input <= addblock(unsigned(not data_in) + 1);
       elsif op = op_floatadd then
-        shift_cnt <= (to_integer(unsigned(data_in(27 downto 23))) + write_offset) mod BLOCKSIZE;
         if data_in(30 downto 23) = X"00" then
           input <= X"0000000000"&data_in(22 downto 0)&"0"; -- denormalized value
         elsif data_in(30 downto 23) = X"FF" then
