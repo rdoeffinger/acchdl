@@ -375,6 +375,45 @@ begin
   end if;
 end process;
 
+--! \brief calculates the exponent value for float output
+--! \retval #exp
+calc_exp : process(clock,reset)
+begin
+  if reset = '1' then
+    null;
+  elsif rising_edge(clock) then
+    case state is
+      when st_out_float2 =>
+        exp <= limited_read_pos * BLOCKSIZE - (NUMBLOCKS / 2 - 4) * BLOCKSIZE + 8 + read_offset;
+      when st_out_float3 =>
+        exp <= exp - floatshift;
+      when others =>
+        null;
+    end case;
+  end if;
+end process;
+
+--! \brief calculates how much shifting is needed so that the highest set bit is leftmost
+--! \retval #floatshift
+calc_floatshift : process(clock,reset)
+begin
+  if reset = '1' then
+    null;
+  elsif rising_edge(clock) then
+    case state is
+      when st_out_float2 =>
+        if allvalue(NUMBLOCKS) = '1' then
+          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(not read_block));
+        else
+          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(read_block));
+        end if;
+      when others =>
+        null;
+    end case;
+  end if;
+end process;
+
+--! \retval #out_buf
 execute : process(clock,reset)
   variable bigtmp : unsigned(2*BLOCKSIZE  downto 0);
   variable exact : std_logic;
@@ -401,22 +440,16 @@ begin
       when st_out_float2 =>
         bigtmp(2*BLOCKSIZE-1 downto BLOCKSIZE) := unsigned(read_block);
         bigtmp(2*BLOCKSIZE) := '0';
-        if allvalue(NUMBLOCKS) = '1' then
-          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(not read_block));
-        else
-          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(read_block));
-        end if;
         if exact_pos >= read_pos then
           exact := '1';
         else
           exact := '0';
         end if;
-        exp <= limited_read_pos * BLOCKSIZE - (NUMBLOCKS / 2 - 4) * BLOCKSIZE + 8 + read_offset;
       when st_out_float3 =>
         bigtmp(BLOCKSIZE-1 downto 0) := unsigned(read_block);
-        exp <= exp - floatshift;
       when st_out_float4 =>
         if exp <= 0 then
+          -- denormal case
           if bigtmp(31 downto 0) /= X"00000000" then
             exact := '0';
           else
