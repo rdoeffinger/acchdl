@@ -1,0 +1,200 @@
+\chapter{The ALU core}
+\section{Interface of the Accumulator VHDL Entity}
+\newcommand\tabhead[1]{\hline\multicolumn{2}{|c|}{#1}\\ \hline}
+\newcommand\tabline[2]{#1 & #2\\ \hline}
+\begin{table}[htbp]
+\begin{tabular}{|l|p{0.75\textwidth}|}
+\tabhead     {Basic input signals}
+\tabline {clock}     {sensitive to rising edge.}
+\tabline {reset}     {set to 1 for an (asynchronous) reset.}
+\hline
+\tabhead     {Control input signals}
+\tabline {sign}      {set to 1 for subtraction instead of addition (flip sign).}
+\tabline {op}        {operation to execute. Use one of the op\_ constants.}
+\tabline {data\_in}  {data to operate on.}
+\tabline {pos}       {block position as signed value needed for some operations.}
+\hline
+\tabhead     {Output signals}
+\tabline {ready}     {
+        if 1 indicates that the operation given by the control input signals
+        is now being processed and the control input signals should be set to
+        the right values for the next operation.
+        Use op\_nop if you do not have any next operation to execute (yet).
+        The input signals may be changed at any time, not only when ready
+        is 1, any value when ready was not 1 will be ignored.}
+\tabline {data\_out} {
+        result data after any read operation. This will be valid the
+        cycle after the ready signal becomes 1 to indicate the start of
+        processing for the operation following the read.}
+\end{tabular}
+\caption{Ports of the ALU core}
+\end{table}
+
+\begin{table}
+\begin{tabular}{|l|p{0.75\textwidth}|}
+\hline
+\tabline {Name}  {Function}
+\hline
+\tabline {op\_nop} {no operation, idle}
+\tabline {op\_add} {
+    add/subtract (depending on sign signal) a 64 bit block
+    (representing a positive integer) at the 32 bit block offset
+    specified by the pos signal.}
+\tabline {op\_readblock} {
+    read 32 bit block specified by the pos signal, reads
+    below the actually RAM-backed memory range return 0,
+    reads above 0 for positive, X"FFFFFFFF" for negative values.}
+\tabline {op\_writeblock} {
+    write 32 bit block specified by the pos signal, writes outside
+    the implemented range are ignored (ideally they should set overflow/
+    underflow flags as appropriate).}
+\tabline {op\_readflags} {
+    read virtual 32 bit flag register. The upper 16 bits indicate
+    which of the lower 16 bits (the actual flags) are valid.}
+\tabline {op\_writeflags} {
+    set the flags marked by a set bit in the upper 16 bits to
+    the value in the lower 16 bits.
+    This is mostly for allowing to restore the register state from system
+    RAM and rarely useful otherwise.}
+\tabline {op\_readoffsets} {
+    get exponent offsets for floating point operations.
+    Exponent offsets are two 16 bit signed integers.
+    Lower 16 bits are for writes (op\_floatadd) higher 16 bits for reads (op\_readfloat).}
+\tabline {op\_writeoffsets} {
+    set exponent offsets for floating point operations.
+    Exponent offsets are two 16 bit signed integers.
+    Lower 16 bits are for writes (op\_floatadd) higher 16 bits for reads (op\_readfloat).}
+\tabline {op\_readfloat} {
+    reads the current register content as a single-precision
+    floating-point value. Denormals and +/-Inf are supported, values that should
+    be NaN are returned as +/-Inf.
+    The pos signal is misused to specify the rounding mode, see~\fref{tab:round}.}
+\tabline {op\_floatadd} {
+    adds/subtracts (depending on sign signal) the given
+    single-precision floating-point value. Note that NaN is treated as Inf
+    currently.}
+\end{tabular}
+\caption{Operations of the ALU core}
+\end{table}
+
+\begin{table}
+\begin{tabular}{|l|l|}
+\hline
+\tabline {pos signal} {rounding mode}
+\hline
+\tabline {0}          {round to $0$}
+\tabline {1}          {round away from $0$}
+\tabline {2}          {round to $-\infty$}
+\tabline {3}          {round to $+\infty$}
+\tabline {4}          {round to nearest}
+\tabline {other}      {unspecified}
+\end{tabular}
+\caption{Rounding Modes}
+\label{tab:round}
+\end{table}
+
+\section{Implementation details}
+\subsection{Steps of the op\_floatadd Operation}
+
+\renewcommand\tabline[2]{#1 & \multicolumn{5}{p{0.75\textwidth}|}{#2}\\}
+\begin{tabular}{|r|p{0.25\textwidth}|r|p{0.25\textwidth}|r|p{0.25\textwidth}|}
+\hline
+\tabline {  0} {Handle Inf/NaN special cases by setting the overflow bit}
+\tabline {  1} {combine sign of value with sign signal}
+\tabline {  2} {extract 32 bit block position and shift value from exponent}
+\tabline {  3} {extract mantissa (with leading 1 or 0 depending on denormal or not)}
+\tabline {  4} {shift mantissa for alignment with 32 bit block boundary}
+\tabline {  5} {load first 32 bit block}
+\tabline {  6} {add/subtract lower part of mantissa to block value}
+\tabline {  7} {store first 32 bit block}
+\tabline {  8} {load second 32 bit block}
+\tabline {  9} {add/subtract upper part of mantissa and carry to block value}
+\tabline { 10} {store second 32 bit block}
+\hline\hline
+\multicolumn{6}{|p{0.75\textwidth}|}{
+    The following steps are only necessary if carry is set,
+    but currently they are done always to simplify the implementation}\\
+\hline\hline
+\tabline { 11} {calculate carry resolution position}
+\tabline { 12} {flip bits in-between current position and carry-resolution position}
+\hline
+13a & load 32 bit block for carry resolution &
+\multirow{3}{*}{13b} & \multirow{3}{0.25\textwidth}{flip sign bit as part of carry resolution} &
+\multirow{3}{*}{13c} & \multirow{3}{0.25\textwidth}{set overflow bit as part of carry "resolution"}\\
+14a & add/subtract carry & & & &\\
+15a & store 32 bit block for carry resolution & & & &\\
+\hline
+\end{tabular}
+
+These steps are organized into clock cycles as follows:
+Clock 1: 0) - 3)
+Clock 2: 4), 5)
+Clock 3: 6), 8), 11), pre-calculate 12)
+Clock 4: 7), 9), 13a)
+Clock 5: 10), 12), 14a), 13b), 13c)
+Clock 6: 15a)
+
+Note that processing of the next operation starts with Clock 5, so in
+each 4 cycles one floatadd operation can complete.
+Reducing the number of clock cycles is difficult for several reasons:
+1) Skipping carry resolution if there is no carry is probably easiest, but
+   will increase code complexity since the carry value is only known after
+   Clock 4, but to gain anything processing of the next instruction would
+   have to start \em at \rm Clock 4.
+2) The dual-port BlockRAM resource can not service more read-write requests
+   than the current implementation uses, thus any improvements either need
+   to use multiple BlockRAMs (which in a previous implementation resulted in
+   low clock speeds) or a RAM resource with more than 2 ports.
+3) Pipelining will need difficult dependency resolution, since the 32 bit blocks
+   that are changed only become known for certain in step 12, though for the
+   general case a worst-case guess based on the pre-calculated value for step
+   12) may be good enough.
+
+\subsection{Steps of the op\_readfloat Operation}
+
+ 1) Determine block number of highest set bit (highest bit not equal to sign),
+    or the number of the block containing the lowest bit representable by a
+    denormal if this is higher.
+ 2) read block determined in step 1 and the one below.
+ 3) determine position of first set/unset bit in read block.
+ 4) calculate exponent value with information from step 1) and 3).
+ 5) use value from step 3) to shift the blocks read in 2) so that the highest
+    bit unequal to the sign is "leftmost".
+ 6) determine which is the lowest block that is not all 0.
+ 7) use results of steps 5) and 6) to check if the value can be represented
+    exactly as float (special case for denormals, needs exponent from step 4).
+ 8) for negative values now invert the value from 5) (together with rounding
+    converts two's complement to absolute value for mantissa).
+ 9) apply rounding if necessary (needs result from step 7 to avoid bias).
+10) adjust exponent for possible carry due to rounding.
+11) use sign, exponent from 10) and mantissa from 9) to build the float value.
+    Needs special-case for denormals and infinities.
+
+These steps are organized into clock cycles as follows:
+Clock 1: wait, since this could overlap with calculation from previous operation
+Clock 1a: wait if a write-back from a previous operation is pending
+Clock 2: 1)
+Clock 3: 2), 6)
+Clock 4: 2), 3)
+Clock 5: 4)
+Clock 6: 4), 5), 7), 8)
+Clock 7: 9), 10), 11)
+
+\subsection{State machine}
+\input{accustate}
+
+
+
+    Meaning of the flags:
+    Bit 0: sign
+    Bit 1: overflow
+    Bit 2: zero
+
+    Meaning of the bit values:
+    Bit 0: sign (only the sign is set, the value stored in the RAM is not
+           changed. There is probably no practical use for this).
+    Bit 1: overflow. Periodically checking and clearing the overflow flag
+           can be used to detect ranges of summands that contain Inf or NaN
+           and may need additional, more careful processing later.
+    Bit 2: zero. Setting to 0 has no effect, setting to 1 clears the register
+           (bits 0 and 1 should be set to 0 at the same time preferably).
