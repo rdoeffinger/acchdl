@@ -8,13 +8,13 @@
 #if 0
 #define EFAC_BARRIER(var) asm("mfence\n\t":::"memory")
 #else
-#define EFAC_BARRIER(var) asm("clflush %0\n\t"::"m"(var):"memory")
+#define EFAC_BARRIER(var) asm("clflush %0\n\t"::"o"(var):"memory")
 #endif
 
 #if 1
 #define EFAC_WRITE(var, val) (var) = (val)
 #else
-#define EFAC_WRITE(var, val) asm("movnti %1, %0\n\t" : "=m"(var) : "r"(val))
+#define EFAC_WRITE(var, val) asm("movnti %1, %0\n\t" : "=o"(var) : "r"(val))
 #endif
 
 /**
