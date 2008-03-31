@@ -1,8 +1,9 @@
 \chapter{The ALU core}
 \section{Interface of the Accumulator VHDL Entity}
+\subsection{Ports of the ALU core}
 \newcommand\tabhead[1]{\hline\multicolumn{2}{|c|}{#1}\\ \hline}
 \newcommand\tabline[2]{#1 & #2\\ \hline}
-\begin{table}[htbp]
+\begin{center}
 \begin{tabular}{|l|p{0.75\textwidth}|}
 \tabhead     {Basic input signals}
 \tabline {clock}     {sensitive to rising edge.}
@@ -27,10 +28,11 @@
         cycle after the ready signal becomes 1 to indicate the start of
         processing for the operation following the read.}
 \end{tabular}
-\caption{Ports of the ALU core}
-\end{table}
+\end{center}
 
-\begin{table}
+\subsection{Operations of the ALU core}
+\renewcommand\tabline[2]{#1 & #2\\ \hline}
+\begin{center}
 \begin{tabular}{|l|p{0.75\textwidth}|}
 \hline
 \tabline {Name}  {Function}
@@ -50,12 +52,14 @@
     underflow flags as appropriate).}
 \tabline {op\_readflags} {
     read virtual 32 bit flag register. The upper 16 bits indicate
-    which of the lower 16 bits (the actual flags) are valid.}
+    which of the lower 16 bits (the actual flags) are valid.
+    For a list of available flags see~\fref{tab:flags}.}
 \tabline {op\_writeflags} {
     set the flags marked by a set bit in the upper 16 bits to
     the value in the lower 16 bits.
     This is mostly for allowing to restore the register state from system
-    RAM and rarely useful otherwise.}
+    RAM and rarely useful otherwise.
+    For a list of available flags see~\fref{tab:flags}.}
 \tabline {op\_readoffsets} {
     get exponent offsets for floating point operations.
     Exponent offsets are two 16 bit signed integers.
@@ -66,18 +70,20 @@
     Lower 16 bits are for writes (op\_floatadd) higher 16 bits for reads (op\_readfloat).}
 \tabline {op\_readfloat} {
     reads the current register content as a single-precision
-    floating-point value. Denormals and +/-Inf are supported, values that should
-    be NaN are returned as +/-Inf.
+    floating-point value. Denormals and $\pm\infty$ are supported, values that should
+    be NaN are returned as $\pm\infty$.
     The pos signal is misused to specify the rounding mode, see~\fref{tab:round}.}
 \tabline {op\_floatadd} {
     adds/subtracts (depending on sign signal) the given
-    single-precision floating-point value. Note that NaN is treated as Inf
+    single-precision floating-point value. Note that NaN is treated as $\infty$
     currently.}
 \end{tabular}
-\caption{Operations of the ALU core}
-\end{table}
+\end{center}
 
-\begin{table}
+\begin{table}[ht]
+\label{tab:round}
+\renewcommand\tabline[2]{#1 & #2\\ \hline}
+\begin{center}
 \begin{tabular}{|l|l|}
 \hline
 \tabline {pos signal} {rounding mode}
@@ -90,16 +96,50 @@
 \tabline {other}      {unspecified}
 \end{tabular}
 \caption{Rounding Modes}
-\label{tab:round}
+\end{center}
 \end{table}
+
+\begin{table}[ht]
+\label{tab:flags}
+\renewcommand\tabline[3]{#1 & #2 & #3\\ \hline}
+\begin{center}
+\begin{tabular}{|r|l|l|}
+\hline
+\tabline {Bit} {Name}     {Remarks}
+\hline
+\tabline {0}   {sign}     {writing only useful for restoring}
+\tabline {1}   {overflow} {helps finding $\infty$ and NaN in input data}
+\tabline {2}   {zero}     {set to 1 and sign to 0 to clear register}
+\hline
+\end{tabular}
+\caption{ALU flags}
+\end{center}
+\end{table}
+
+Writing to the sign flag only changes the sign while keeping the two's
+complement representation the same, so this has probably no practical
+use beyond restoring the register state.\\
+By periodically checking and clearing the overflow flag it is possible to
+detect summand ranges that contain $\infty$ or NaN values and process these
+parts more carefully in an additional step. Note that to make this work well,
+adding $\infty$ or NaN has \em no \rm effect except setting the overflow flag.\\
+While the overflow flag is set, reads will return $\pm\infty$, after clearing
+the flag the result will be the same as if there had been no $\pm\infty$ or NaN
+value in the input.\\
+Clearing the zero flag has no effect, since there is no obvious and non-conflicting
+way to give this a meaning. Setting the zero flag clears the register's two's
+complement representation. This should always be combined with clearing the sign
+flag, otherwise the behaviour (while still well-defined) might be unexpected,
+and usually the overflow flag should be cleared as well.\\
 
 \section{Implementation details}
 \subsection{Steps of the op\_floatadd Operation}
 
-\renewcommand\tabline[2]{#1 & \multicolumn{5}{p{0.75\textwidth}|}{#2}\\}
+\renewcommand\tabline[2]{#1 & \multicolumn{5}{p{0.8\textwidth}|}{#2}\\}
+\begin{center}
 \begin{tabular}{|r|p{0.25\textwidth}|r|p{0.25\textwidth}|r|p{0.25\textwidth}|}
 \hline
-\tabline {  0} {Handle Inf/NaN special cases by setting the overflow bit}
+\tabline {  0} {Handle $\infty$/NaN special cases by setting the overflow bit}
 \tabline {  1} {combine sign of value with sign signal}
 \tabline {  2} {extract 32 bit block position and shift value from exponent}
 \tabline {  3} {extract mantissa (with leading 1 or 0 depending on denormal or not)}
@@ -125,76 +165,97 @@
 15a & store 32 bit block for carry resolution & & & &\\
 \hline
 \end{tabular}
+\end{center}
 
-These steps are organized into clock cycles as follows:
-Clock 1: 0) - 3)
-Clock 2: 4), 5)
-Clock 3: 6), 8), 11), pre-calculate 12)
-Clock 4: 7), 9), 13a)
-Clock 5: 10), 12), 14a), 13b), 13c)
-Clock 6: 15a)
+These steps are organized into clock cycles as follows:\\
+\renewcommand\tabline[3]{#1 & #2 & #3\\}
+\begin{center}
+\begin{tabular}{|r|l|l|}
+\hline
+\tabline {Clock} {Steps}                          {State}
+\hline
+\tabline {1}     {0) - 3)}                        {some final state}
+\tabline {2}     {4), 5)}                         {st\_in\_float0}
+\tabline {3}     {6), 8), 11), pre-calculate 12)} {st\_add1}
+\tabline {4}     {7), 9), 13a)}                   {st\_add2}
+\tabline {5}     {10), 12), 14a), 13b), 13c)}     {st\_fixcarry}
+\tabline {6}     {15a)}                           {first of next command}
+\hline
+\end{tabular}
+\end{center}
+For descriptions of the states, see~\fref{sec:alustate}.\\
 
 Note that processing of the next operation starts with Clock 5, so in
-each 4 cycles one floatadd operation can complete.
-Reducing the number of clock cycles is difficult for several reasons:
-1) Skipping carry resolution if there is no carry is probably easiest, but
-   will increase code complexity since the carry value is only known after
-   Clock 4, but to gain anything processing of the next instruction would
-   have to start \em at \rm Clock 4.
-2) The dual-port BlockRAM resource can not service more read-write requests
-   than the current implementation uses, thus any improvements either need
-   to use multiple BlockRAMs (which in a previous implementation resulted in
-   low clock speeds) or a RAM resource with more than 2 ports.
-3) Pipelining will need difficult dependency resolution, since the 32 bit blocks
-   that are changed only become known for certain in step 12, though for the
-   general case a worst-case guess based on the pre-calculated value for step
-   12) may be good enough.
+each 4 cycles one floatadd operation can complete.\\
+Reducing the number of clock cycles is difficult for several reasons:\\
+\begin{itemize}
+\item Skipping carry resolution if there is no carry is probably easiest, but
+      will increase code complexity since the carry value is only known after
+      Clock 4, but to gain anything processing of the next instruction would
+      have to start \em at \rm Clock 4.
+\item The dual-port BlockRAM resource can not service more read-write requests
+      than the current implementation uses, thus any improvements either need
+      to use multiple BlockRAMs (which in a previous implementation resulted in
+      low clock speeds) or a RAM resource with more than 2 ports.
+\item Pipelining will need difficult dependency resolution, since the 32 bit blocks
+      that are changed only become known for certain in step 12, though for the
+      general case a worst-case guess based on the pre-calculated value for step
+      12) may be good enough.
+\end{itemize}
 
 \subsection{Steps of the op\_readfloat Operation}
 
- 1) Determine block number of highest set bit (highest bit not equal to sign),
-    or the number of the block containing the lowest bit representable by a
-    denormal if this is higher.
- 2) read block determined in step 1 and the one below.
- 3) determine position of first set/unset bit in read block.
- 4) calculate exponent value with information from step 1) and 3).
- 5) use value from step 3) to shift the blocks read in 2) so that the highest
-    bit unequal to the sign is "leftmost".
- 6) determine which is the lowest block that is not all 0.
- 7) use results of steps 5) and 6) to check if the value can be represented
-    exactly as float (special case for denormals, needs exponent from step 4).
- 8) for negative values now invert the value from 5) (together with rounding
-    converts two's complement to absolute value for mantissa).
- 9) apply rounding if necessary (needs result from step 7 to avoid bias).
-10) adjust exponent for possible carry due to rounding.
-11) use sign, exponent from 10) and mantissa from 9) to build the float value.
-    Needs special-case for denormals and infinities.
+\begin{center}
+\begin{tabular}{|r|p{0.75\textwidth}|}
+\hline
+ 1 & Determine block number of highest set bit (highest bit not equal to sign),
+     or the number of the block containing the lowest bit representable by a
+     denormal if this is higher.\\
+ 2 & read block determined in step 1) and the one below.\\
+ 3 & determine position of first set/unset bit in read block.\\
+ 4 & calculate exponent value with information from steps 1) and 3).\\
+ 5 & use value from step 3) to shift the blocks read in 2) so that the highest
+     bit unequal to the sign is "leftmost".\\
+ 6 & determine which is the lowest block that is not all 0.\\
+ 7 & use results of steps 5) and 6) to check if the value can be represented
+     exactly as float, a special case for denormals needs exponent from step 4).\\
+ 8 & for negative values now invert the value from step 5) (together with rounding
+     converts two's complement to absolute value for mantissa).\\
+ 9 & apply rounding if necessary (needs result from step 7) to avoid bias).\\
+10 & adjust exponent for possible carry due to rounding.\\
+11 & use sign, exponent from step 10) and mantissa from step 9) to build the float value.
+     Needs special-case for denormals and infinities.\\
+\hline
+\end{tabular}
+\end{center}
 
-These steps are organized into clock cycles as follows:
-Clock 1: wait, since this could overlap with calculation from previous operation
-Clock 1a: wait if a write-back from a previous operation is pending
-Clock 2: 1)
-Clock 3: 2), 6)
-Clock 4: 2), 3)
-Clock 5: 4)
-Clock 6: 4), 5), 7), 8)
-Clock 7: 9), 10), 11)
+These steps are organized into clock cycles as follows:\\
+\renewcommand\tabline[3]{#1 & #2 & #3\\}
+\begin{center}
+\begin{tabular}{|r|l|l|}
+\hline
+\tabline {Clock} {Steps}                          {State}
+\hline
+\tabline {1}     {previous operation finishes}    {some final state}
+\tabline {1a}    {wait if write-back pending}     {st\_out\_float0}
+\tabline {2}     {1)}                             {st\_out\_float0}
+\tabline {3}     {2), 6)}                         {st\_out\_float1}
+\tabline {4}     {2), 3)}                         {st\_out\_float2}
+\tabline {5}     {4)}                             {st\_out\_float3}
+\tabline {6}     {4), 5), 7), 8)}                 {st\_out\_float4}
+\tabline {7}     {9), 10), 11)}                   {st\_out\_float\_normal or st\_out\_float\_denormal or st\_out\_float\_inf}
+\hline
+\end{tabular}
+\end{center}
+For descriptions of the states, see~\fref{sec:alustate}.\\
 
 \subsection{State machine}
+\label{sec:alustate}
+\begin{figure}[ht]
+\begin{center}
 \input{accustate}
+\end{center}
+\end{figure}
 
 
 
-    Meaning of the flags:
-    Bit 0: sign
-    Bit 1: overflow
-    Bit 2: zero
-
-    Meaning of the bit values:
-    Bit 0: sign (only the sign is set, the value stored in the RAM is not
-           changed. There is probably no practical use for this).
-    Bit 1: overflow. Periodically checking and clearing the overflow flag
-           can be used to detect ranges of summands that contain Inf or NaN
-           and may need additional, more careful processing later.
-    Bit 2: zero. Setting to 0 has no effect, setting to 1 clears the register
-           (bits 0 and 1 should be set to 0 at the same time preferably).

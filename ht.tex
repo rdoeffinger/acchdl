@@ -1,30 +1,34 @@
-\chapter{Basic HyperTransport Concepts}
+\chapter{HyperTransport}
+
+\section{Basic HyperTransport Concepts}
 
 To ease understanding of some of the implementation approaches, I will describe
 some of the basics of HyperTransport and some of the details that are not easy
 find elsewhere.\\
 For more details and precise descriptions, please refer to the HyperTransport
 specification~\cite{htspec}.\\
-HyperTransport is a high-speed device interconnect, used in particular by AMD CPUs.
+HyperTransport is a high-speed device interconnect, used in particular by AMD
+CPUs.\\
 A HyperTransport link always connects exactly two devices, which means reduced
-management overhead compared to and ordinary bus, while still allowing to connect many
-devices by allowing chaining of links, tunnels and bridges.\\
-An optional part of the specification also allows for more complex HyperTransport
-networks with more advanced routing.\\
-On the physical level, HyperTransport uses differential signalling and independent links
-for each communication direction.\\
-Link speed can be varied independently in each direction as well, allowing any combination
-of link frequencies from 200 to 2600 MHz (DDR) and link widths of 2 bits to 32 bits (requiring
-29 to 199 pins respectively~\cite{htarch}).\\
-Each link also uses 3 independent virtual channels (i.e. each has their own buffers so
-they can not block each other): posted, nonposted and response.\\
+management overhead compared to and ordinary bus, while still allowing to
+connect many devices by allowing chaining of links, tunnels and bridges.\\
+An optional part of the specification also allows for more complex
+HyperTransport networks with more advanced routing.\\
+On the physical level, HyperTransport uses differential signalling and
+independent links for each communication direction.\\
+Link speed can be varied independently in each direction as well, allowing
+any combination of link frequencies from 200 to 2600 MHz (DDR) and link widths
+of 2 bits to 32 bits (requiring 29 to 199 pins respectively~\cite{htarch}).\\
+Each link also uses 3 independent virtual channels (i.e. each has their own
+buffers so they can not block each other): posted, nonposted and response.\\
 Flow control is done using a credit-based system: each virtual channel has an
-associated number of credits on the sender side (representing available buffers on
-the receiver side), independent for command and data.\\
+associated number of credits on the sender side (representing available buffers
+on the receiver side), independent for command and data.\\
 Sending a command/data reduces the number of credits on the sender side,
 the receiver increases them again by sending appropriate nop command packets
 (nops do not use credits, thus no deadlocks are possible).\\
-For data, each data packet uses one credit (size can vary between 4 and 64 bytes).
+For data, each data packet uses one credit (size can vary between 4 and 64
+bytes).\\
 There is an optional data credit mode where each 4 bytes of data use up one
 credit, but this is not available in the implementation used.\\
 The implementation used provides 32 credits for each virtual channel, for both
@@ -34,14 +38,42 @@ with same layout and behaviour as PCI configuration registers, so it is easily
 possible to use a HyperTransport device just like a PCI device, just with a much
 faster and lower latency connection.\\
 
+\section{The HyperTransport Core}
 
-
-
+The HyperTransport implementation used is the "HT Core" by the Computer
+Architecture Group of the University of Mannheim, more specifially the
+version 0.9 for 16-bit links from September 2007.\\
+This implementation handles HyperTransport data credits in a non-trivial
+way, and since its documentation does not explain this clearly, it is
+explained here.\\
 Credits for commands are restored to the sender automatically when they are
 read from the fifo, whereas for data (since it can have varying size) an
 explicit data\_complete signal must be used.\\
+This signal must be set to high for exactly one cycle each time a data packet
+has been completely read. In particular, it must not be set if a command
+has no associated data, and it must be set for only one cycle even if reading
+all associated data takes multiple cycles, and it must be set after or
+exactly when the last data of the packet is shifted out of the FIFO.\\
 Since correct handling of this signal increases complexity significantly
 and wrong handling can result in the CPU hanging, this together with some
-additional simplifications is handled separately in the ht\_simplify module.
+additional simplifications is handled separately in the ht\_simplify module,
+desribed in the next section.
 
+\section{The HyperTransport Simplification Layer}
 
+The HyperTransport simplification layer (the module called ht\_simplify)
+merges the posted and non-posted queue into one queue, handles setting
+the data\_complete signals of the HyperTransport core, splits multi-dword
+writes into multiple writes of a single dword and inserts nop
+commands into the queue as necessary, thus eliminating the need for
+and extra "empty" signal, and provides a signal that indicates
+if the current command must be replied to via the response queue.\\
+This greatly reduces the complexity and frustration of designing a device
+that uses HyperTransport by handling the parts that are most error-prone
+and easily lead to a stopped CPU.\\
+In the current implementation it has also several drawbacks: byte-sized
+are not handled correctly, and the transfer rate is limited to one command
+and 32 bit data per clock cycle, whereas the HT Core allows for up to one
+command and 64 bytes of data per clock cycle per queue.\\
+
+\section{The Memory-Mapping Interface}
