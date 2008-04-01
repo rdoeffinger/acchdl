@@ -1,0 +1,126 @@
+\newcommand*{\fancyreflstlabelprefix}{lst}
+\frefformat{vario}{\fancyreflstlabelprefix}{listing\fancyrefdefaultspacing#1#3}
+\Frefformat{vario}{\fancyreflstlabelprefix}{Listing\fancyrefdefaultspacing#1#3}
+\lstdefinelanguage[x86att]{Assembler}{
+  morekeywords={
+    add, addl, addq, call, clflush, enter, jmp, leave,
+    mov, movaps, movl, movslq, movss,
+    pop, popl, push, pushl, ret, sal, sall, sub, subl, xor, xorl
+  },
+  morecomment=[l];,
+  morecomment=[l]\#,
+  morestring=[b]",
+  morestring=[b]',
+  keywordsprefix=\%
+}
+
+\chapter{The Software Interface}
+For accessing the hardware a simple C library interface is provided.\\
+Except for initialization most of the code is in the header file, so
+that the functions can be inlined.\\
+To demonstrate the difference this makes, the code in~\fref{lst:demo}
+is compiled with different options.
+All tests were done with "gcc (GCC) 4.1.2 (Ubuntu 4.1.2-0ubuntu4)".
+
+%\lstset{basicstyle=\itshape}
+\lstset{captionpos=b,columns=[c]flexible}
+\lstset{language=C}
+\begin{lstlisting}[float=ht,caption=compilation demonstration code,label=lst:demo]
+#include "libefac.h"
+void test(void) {
+  efac_add4(0, 1.0, 1.0, 1.0, 1.0);
+}
+\end{lstlisting}
+
+\lstset{language={[x86att]Assembler}}
+
+\begin{lstlisting}[float=ht,caption={x86\_64 using register pointer (gcc -S -m64 -O3)},label={lst:regptr}]
+test:
+        movq    efac_regs(%rip), %rdx
+        movl    $0x3f800000, %eax
+        movl    %eax, 64(%rdx)
+        movl    %eax, 68(%rdx)
+        movl    %eax, 72(%rdx)
+        movl    %eax, 76(%rdx)
+        clflush 64(%rdx)
+        ret
+\end{lstlisting}
+
+\begin{lstlisting}[float=ht,caption={x86\_64 inlined (gcc -S -m64 -O3)},label={lst:inline64}]
+test:
+        movl    $0x3f800000, %eax
+        movl    %eax, efac_regs+64(%rip)
+        movl    %eax, efac_regs+68(%rip)
+        movl    %eax, efac_regs+72(%rip)
+        movl    %eax, efac_regs+76(%rip)
+        clflush efac_regs+64(%rip)
+        ret
+\end{lstlisting}
+
+\begin{lstlisting}[float=ht,caption={x86\_64 not inlined (gcc -S -m64 -O3 -fno-inline)},label={lst:noinline64}]
+efac_add4:
+        sall    $12, %edi
+        movslq  %edi,%rdi
+        addq    $efac_regs, %rdi
+        movss   %xmm0, 64(%rdi)
+        movss   %xmm1, 68(%rdi)
+        movss   %xmm2, 72(%rdi)
+        movss   %xmm3, 76(%rdi)
+        clflush 64(%rdi)
+        ret
+
+test:
+        movss   .LC0(%rip), %xmm3
+        xorl    %edi, %edi
+        movaps  %xmm3, %xmm2
+        movaps  %xmm3, %xmm1
+        movaps  %xmm3, %xmm0
+        jmp     efac_add4
+\end{lstlisting}
+
+\begin{lstlisting}[float=ht,caption={x86 inlined (gcc -S -m32 -O3)},label={lst:inline32}]
+test:
+        movl    $0x3f800000, %eax
+        pushl   %ebp
+        movl    %esp, %ebp
+        movl    %eax, efac_regs+64
+        movl    %eax, efac_regs+68
+        movl    %eax, efac_regs+72
+        movl    %eax, efac_regs+76
+        clflush efac_regs+64
+        popl    %ebp
+        ret
+\end{lstlisting}
+
+\begin{lstlisting}[float=ht,caption={x86 not inlined (gcc -S -m32 -O3 -fno-inline)},label={lst:noinline32}]
+efac_add4:
+        pushl   %ebp
+        movl    %esp, %ebp
+        movl    8(%ebp), %edx
+        sall    $12, %eax
+        addl    $efac_regs, %eax
+        movl    %edx, 64(%eax)
+        movl    12(%ebp), %edx
+        movl    %edx, 68(%eax)
+        movl    16(%ebp), %edx
+        movl    %edx, 72(%eax)
+        movl    20(%ebp), %edx
+        movl    %edx, 76(%eax)
+        clflush 64(%eax)
+        popl    %ebp
+        ret
+
+test:
+        pushl   %ebp
+        movl    $0x3f800000, %eax
+        movl    %esp, %ebp
+        subl    $16, %esp
+        movl    %eax, 12(%esp)
+        movl    %eax, 8(%esp)
+        movl    %eax, 4(%esp)
+        movl    %eax, (%esp)
+        xorl    %eax, %eax
+        call    efac_add4
+        leave
+        ret
+\end{lstlisting}
