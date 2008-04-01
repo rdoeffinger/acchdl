@@ -88,11 +88,11 @@
 \hline
 \tabline {pos signal} {rounding mode}
 \hline
-\tabline {0}          {round to $0$}
-\tabline {1}          {round away from $0$}
-\tabline {2}          {round to $-\infty$}
-\tabline {3}          {round to $+\infty$}
-\tabline {4}          {round to nearest}
+\tabline {0}          {to $0$}
+\tabline {1}          {away from $0$}
+\tabline {2}          {to $-\infty$}
+\tabline {3}          {to $+\infty$}
+\tabline {4}          {to nearest}
 \tabline {other}      {unspecified}
 \end{tabular}
 \caption{Rounding Modes}
@@ -101,24 +101,36 @@
 
 \begin{table}[ht]
 \label{tab:flags}
-\renewcommand\tabline[3]{#1 & #2 & #3\\ \hline}
+\renewcommand\tabline[2]{#1 & #2\\ \hline}
 \begin{center}
 \begin{tabular}{|r|l|l|}
 \hline
-\tabline {Bit} {Name}     {Remarks}
+\tabline {Bit} {Name}
 \hline
-\tabline {0}   {sign}     {writing only useful for restoring}
-\tabline {1}   {overflow} {helps finding $\infty$ and NaN in input data}
-\tabline {2}   {zero}     {set to 1 and sign to 0 to clear register}
-\hline
+\tabline {0}   {sign}
+\tabline {1}   {overflow}
+\tabline {2}   {zero}
 \end{tabular}
 \caption{ALU flags}
 \end{center}
 \end{table}
 
+Currently, 3 flags are supported: sign, overflow and zero.\\
+The sign and zero flags have their usual meaning, indicating if
+the register value is negative or zero. Contrary to normal floating
+point values, negative 0 does not exist.\\
 Writing to the sign flag only changes the sign while keeping the two's
 complement representation the same, so this has probably no practical
 use beyond restoring the register state.\\
+Clearing the zero flag has no effect, since there is no obvious and non-conflicting
+way to give this a meaning. Setting the zero flag clears the register's two's
+complement representation. This should always be combined with clearing the sign
+flag, otherwise the behaviour (while still well-defined) might be unexpected,
+and usually the overflow flag should be cleared as well.\\
+The overflow flag indicates any kind of overflow-like situation: adding $\pm\infty$,
+adding NaN, adding a value that is too large to fit into the backing RAM (e.g. due
+to a large write exponent offset) or an addition that causes an ordinary overflow
+of the two's complement representation.\\
 By periodically checking and clearing the overflow flag it is possible to
 detect summand ranges that contain $\infty$ or NaN values and process these
 parts more carefully in an additional step. Note that to make this work well,
@@ -126,11 +138,16 @@ adding $\infty$ or NaN has \em no \rm effect except setting the overflow flag.\\
 While the overflow flag is set, reads will return $\pm\infty$, after clearing
 the flag the result will be the same as if there had been no $\pm\infty$ or NaN
 value in the input.\\
-Clearing the zero flag has no effect, since there is no obvious and non-conflicting
-way to give this a meaning. Setting the zero flag clears the register's two's
-complement representation. This should always be combined with clearing the sign
-flag, otherwise the behaviour (while still well-defined) might be unexpected,
-and usually the overflow flag should be cleared as well.\\
+In general, any operations that can cause the overflow flag to be set should ensure
+that the register value is updated in a way that allows "chaining" of registers
+to simplify extension to larger exponent ranges.\\
+Chaining means that multiple registers add the same numbers, but use different
+write exponent offsets. Like this, these registers together can be used
+as one larger register with some additional (possibly software) code to handle
+reading the current value.\\
+An obvious future extension to these flags would be an "inexact" flag if due to
+a negative write exponent offset or addition of double-precision support the
+ALU is no longer always exact.
 
 \section{Implementation details}
 \subsection{Steps of the op\_floatadd Operation}
@@ -256,6 +273,4 @@ For descriptions of the states, see~\fref{sec:alustate}.\\
 \input{accustate}
 \end{center}
 \end{figure}
-
-
 
