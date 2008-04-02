@@ -44,6 +44,7 @@ entity ht_simplify is
     cmd_stop : in std_logic; --! if set, output the same command during the next cycle
     cmd : out std_logic_vector(CMD_LEN - 1 downto 0); --! current HyperTransport command, or 0 if none available
     cmd_needs_reply : out std_logic; --! set if the command needs a reply (reads, non-posted commands)
+    cmd_final : out std_logic; --! set if final part of a split command
     tag : out std_logic_vector(TAG_LEN - 1 downto 0); --! tag associated with current command, if any
     addr : out std_logic_vector(ADDR_LEN - 1 downto 0); --! address associated with current command, if any
     data : out std_logic_vector(31 downto 0) --! data associated with current command, if any
@@ -63,11 +64,13 @@ alias nonposted_cmd_in_addr   : std_logic_vector(ADDR_LEN - 1 downto 0) is nonpo
 
 signal new_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
 signal new_cmd_needs_reply : std_logic;
+signal new_cmd_final : std_logic;
 signal new_tag : std_logic_vector(TAG_LEN - 1 downto 0);
 signal new_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
 signal new_data : std_logic_vector(31 downto 0);
 signal last_cmd : std_logic_vector(CMD_LEN - 1 downto 0);
 signal last_cmd_needs_reply : std_logic;
+signal last_cmd_final : std_logic;
 signal last_tag : std_logic_vector(TAG_LEN - 1 downto 0);
 signal last_addr : std_logic_vector(ADDR_LEN - 1 downto 0);
 signal last_data : std_logic_vector(31 downto 0);
@@ -120,9 +123,21 @@ signal np_done : unsigned(COUNT_LEN - 1 downto 0);
     return res;
   end;
 
+  --! determine if a given HT command has a valid count field
+  function has_count(cmd : in std_logic_vector(CMD_LEN - 1 downto 0)) return boolean is
+    variable res : boolean;
+  begin
+    res := cmd(4 downto 3) = "01"; -- write request
+    res := res or cmd(5 downto 4) = "01"; -- read request
+    res := res or cmd = "110000"; -- read response
+    res := res or cmd = "111101"; -- atomic read-modify-write
+    return res;
+  end;
+
 begin
   cmd <= last_cmd when cmd_stop = '1' else new_cmd;
   cmd_needs_reply <= last_cmd_needs_reply when cmd_stop = '1' else new_cmd_needs_reply;
+  cmd_final <= last_cmd_final when cmd_stop = '1' else new_cmd_final;
   tag <= last_tag when cmd_stop = '1' else new_tag;
   addr <= last_addr when cmd_stop = '1' else new_addr;
   data <= last_data when cmd_stop = '1' else new_data;
@@ -185,6 +200,7 @@ begin
     if reset_n = '0' then
       last_cmd <= (others => '0');
       last_cmd_needs_reply <= '0';
+      last_cmd_final <= '1';
       last_tag <= (others => '0');
       last_addr <= (others => '0');
       last_data <= (others => '0');
@@ -192,6 +208,7 @@ begin
       if cmd_stop = '0' then
         last_cmd <= new_cmd;
         last_cmd_needs_reply <= new_cmd_needs_reply;
+        last_cmd_final <= new_cmd_final;
         last_tag <= new_tag;
         last_addr <= new_addr;
         last_data <= new_data;
@@ -212,6 +229,7 @@ begin
       np_done <= (others => '0');
       new_cmd <= (others => '0');
       new_cmd_needs_reply <= '0';
+      new_cmd_final <= '1';
       new_tag <= (others => '0');
       new_addr <= (others => '0');
       new_data <= (others => '0');
@@ -240,10 +258,12 @@ begin
           if needs_data(p_cmd) and (p_done(0) = '1' or p_done = p_count) then
             p_data_stop <= '0';
           end if;
-          if not needs_data(p_cmd) or p_done = p_count then
+          if not has_count(p_cmd) or p_done = p_count then
+            new_cmd_final <= '1';
             p_cmd_stop <= '0';
             p_done <= (others => '0');
           else
+            new_cmd_final <= '0';
             p_done <= p_done + 1;
           end if;
         elsif np_cmd_avail = '1' and
@@ -263,15 +283,18 @@ begin
           if needs_data(np_cmd) and (np_done(0) = '1' or np_done = np_count) then
             np_data_stop <= '0';
           end if;
-          if not needs_data(np_cmd) or np_done = np_count then
+          if not has_count(np_cmd) or np_done = np_count then
+            new_cmd_final <= '1';
             np_cmd_stop <= '0';
             np_done <= (others => '0');
           else
+            new_cmd_final <= '0';
             np_done <= np_done + 1;
           end if;
         else
           new_cmd <= (others => '0');
           new_cmd_needs_reply <= '0';
+          new_cmd_final <= '1';
           new_tag <= (others => '0');
           new_addr <= (others => '0');
           new_data <= (others => '0');

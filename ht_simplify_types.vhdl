@@ -33,6 +33,7 @@ component ht_simplify is
     cmd_stop : in std_logic;
     cmd : out std_logic_vector(CMD_LEN - 1 downto 0);
     cmd_needs_reply : out std_logic;
+    cmd_final : out std_logic;
     tag : out std_logic_vector(TAG_LEN - 1 downto 0);
     addr : out std_logic_vector(ADDR_LEN - 1 downto 0);
     data : out std_logic_vector(31 downto 0)
