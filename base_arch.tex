@@ -27,11 +27,11 @@
 %% simplifier <-> mmap interface connections
   \renewcommand{\mysc}{-3mm}
   \renewcommand{\myofs}{16mm}
-  \foreach \n/\txt in {  0/cmd, 1/data, 2/addr, 3/needs\_reply,
-                         8/r\_cmd\_full, 11/r\_data\_full}
+  \foreach \n/\txt in {  0/cmd, 1/data, 2/addr, 3/needs\_reply, 4/final,
+                         9/r\_cmd\_full, 12/r\_data\_full}
     \draw[->] ([yshift=\mysc*\n+\myofs] HT-simplify.east) -- ([yshift=\mysc*\n+\myofs] HT-interface.west) node {\txt};
-  \foreach \n/\txt in {  4/cmd\_stop,
-                         6/r\_cmd,        7/r\_cmd\_put,    9/r\_data,        10/r\_data\_put}
+  \foreach \n/\txt in {  5/cmd\_stop,
+                         7/r\_cmd,        8/r\_cmd\_put,   10/r\_data,        11/r\_data\_put}
     \draw[<-] ([yshift=\mysc*\n+\myofs] HT-simplify.east) -- ([yshift=\mysc*\n+\myofs] HT-interface.west) node {\txt};
 
 %% mmap interface <-> accumulators connections

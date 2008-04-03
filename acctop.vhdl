@@ -178,6 +178,7 @@ signal UnitID : std_logic_vector(4 downto 0);
 signal cmd_stop : std_logic;
 signal cmd : std_logic_vector(CMD_LEN - 1 downto 0);
 signal cmd_needs_reply : std_logic;
+signal cmd_final : std_logic;
 signal tag : std_logic_vector(TAG_LEN - 1 downto 0);
 signal addr : std_logic_vector(ADDR_LEN - 1 downto 0);
 signal data : std_logic_vector(31 downto 0);
@@ -208,6 +209,7 @@ begin
     cmd_stop => cmd_stop,
     cmd => cmd,
     cmd_needs_reply => cmd_needs_reply,
+    cmd_final => cmd_final,
     tag => tag,
     addr => addr,
     data => data
@@ -221,6 +223,7 @@ begin
     cmd_stop => cmd_stop,
     cmd => cmd,
     cmd_needs_reply => cmd_needs_reply,
+    cmd_final => cmd_final,
     tag => tag,
     addr => addr,
     data => data,

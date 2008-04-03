@@ -18,6 +18,7 @@ component ht_mmap_if is
     cmd_stop : out std_logic;
     cmd : in std_logic_vector(CMD_LEN - 1 downto 0);
     cmd_needs_reply : in std_logic;
+    cmd_final : in std_logic;
     tag : in std_logic_vector(TAG_LEN - 1 downto 0);
     addr : in std_logic_vector(ADDR_LEN - 1 downto 0);
     data : in std_logic_vector(31 downto 0);

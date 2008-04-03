@@ -18,6 +18,7 @@ entity ht_mmap_if is
     cmd_stop : out std_logic;
     cmd : in std_logic_vector(CMD_LEN - 1 downto 0);
     cmd_needs_reply : in std_logic;
+    cmd_final : in std_logic;
     tag : in std_logic_vector(TAG_LEN - 1 downto 0);
     addr : in std_logic_vector(ADDR_LEN - 1 downto 0);
     data : in std_logic_vector(31 downto 0);
@@ -36,10 +37,11 @@ architecture behaviour of ht_mmap_if is
 alias response_cmd_out_cmd    : std_logic_vector(CMD_LEN  - 1 downto 0) is response_cmd_out(CMD_OFFSET  + CMD_LEN  - 1 downto CMD_OFFSET);
 alias response_cmd_out_unitid : std_logic_vector(5        - 1 downto 0) is response_cmd_out(12 downto 8);
 alias response_cmd_out_tag    : std_logic_vector(TAG_LEN  - 1 downto 0) is response_cmd_out(TAG_OFFSET  + TAG_LEN  - 1 downto TAG_OFFSET);
+alias response_cmd_out_count  : std_logic_vector(COUNT_LEN- 1 downto 0) is response_cmd_out(COUNT_OFFSET  + COUNT_LEN  - 1 downto COUNT_OFFSET);
 alias response_cmd_out_format : std_logic_vector(3        - 1 downto 0) is response_cmd_out(95 downto 93);
 
 --! the number of bits for the ALU number, i.e. log2(number of ALUs)
-constant REGBITS : integer := 4;
+constant REGBITS : integer := 1;
 --! the number of ALUs calculated from REGBITS
 constant NUMREGS : integer := 2**REGBITS;
 type data_array_t is array(0 to NUMREGS-1) of addblock;
@@ -80,6 +82,10 @@ signal state : state_t;
 signal read_reg : natural range 0 to NUMREGS - 1;
 --! ALU number part of command address (starting from addr(10)) as integer
 signal cmd_reg : integer range 0 to NUMREGS - 1;
+--! set if read is the final one of a multi-dword read
+signal read_final : std_logic;
+--! number of dwords proccessed in current read - 1
+signal read_count : std_logic_vector(COUNT_LEN - 1 downto 0);
 
   --! determine if the given command has data attached
   function needs_data(cmd : in std_logic_vector(CMD_LEN - 1 downto 0)) return boolean is
@@ -116,10 +122,39 @@ begin
   accreset <= not reset_n;
   response_cmd_out(7 downto 6) <= "00";
   response_cmd_out(15 downto 13) <= "000";
-  response_cmd_out(92 downto 21) <= X"000000000000000000";
+  response_cmd_out(21) <= '0';
+  response_cmd_out(92 downto 26) <= X"0000000000000000"&"000";
   response_cmd_out_unitid <= UnitID;
 
   cmd_reg <= to_integer(unsigned(addr(10 + REGBITS - 1 downto 10)));
+
+  --! \retval #read_final
+  get_final : process(clock,reset_n)
+  begin
+    if reset_n = '0' then
+      read_final <= '1';
+    elsif rising_edge(clock) then
+      if state = START then
+        read_final <= cmd_final;
+      end if;
+    end if;
+  end process;
+
+  --! \retval #read_count
+  update_read_count : process(clock,reset_n)
+  begin
+    if reset_n = '0' then
+      read_count <= (others => '0');
+    elsif rising_edge(clock) then
+      if state = READ_WAIT4 and response_cmd_full = '0' and response_data_full = '0' then
+        if read_final = '1' then
+          read_count <= (others => '0');
+        else
+          read_count <= std_logic_vector(unsigned(read_count) + 1);
+        end if;
+      end if;
+    end if;
+  end process;
 
   --! \retval #response_cmd_out
   --! \retval #response_cmd_put
@@ -144,11 +179,16 @@ begin
         end if;
         response_cmd_out_tag <= tag;
       elsif state = READ_WAIT3 then
-        response_data_out <= X"00000000"&data_out(read_reg);
+        if read_count(0) = '0' then
+          response_data_out <= X"00000000"&data_out(read_reg);
+        else
+          response_data_out(63 downto 32) <= data_out(read_reg);
+        end if;
       end if;
       if state = READ_WAIT4 and response_cmd_full = '0' and response_data_full = '0' then
-        response_cmd_put <= '1';
-        response_data_put <= put_data;
+        response_cmd_out_count <= read_count;
+        response_cmd_put <= read_final;
+        response_data_put <= put_data and (read_count(0) or read_final);
       else
         response_cmd_put <= '0';
         response_data_put <= '0';
