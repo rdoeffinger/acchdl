@@ -80,15 +80,34 @@ a purely user-level library available for accessing the functionality.\\
 \input{memlayout}
 \label{fig:memlayout}
 \caption{Memory layout for memory-mapped access to ALUs}
-Addresses marked as "add" have no meaning when read except the first 5:\\
 \begin{tabular}{ll}
-$^a$ & current ALU value as float rounded to $0$\\
-$^b$ & current ALU value as float rounded away from $0$\\
-$^c$ & current ALU value as float rounded to $-\infty$\\
-$^d$ & current ALU value as float rounded to $+\infty$\\
-$^e$ & current ALU value as float rounded to nearest\\
+$^a$ & read: current ALU value as float rounded to $0$\\
+$^b$ & read: current ALU value as float rounded away from $0$\\
+$^c$ & read: current ALU value as float rounded to $-\infty$\\
+$^d$ & read: current ALU value as float rounded to $+\infty$\\
+$^e$ & read: current ALU value as float rounded to nearest\\
 \end{tabular}
-\\
-These are also described in~\fref{tab:round}.
 \end{center}
 \end{figure}
+
+The memory layout of a single ALU is described in~\fref{fig:memlayout}.
+Address offsets are indicated on the right side in multiples of 4 bytes.\\
+The 4 KB area is split in two 2 KB parts: the lower part to execute operations
+on the ALU and the upper part for the status.\\
+For the command area only areas that add or subtract the written single-precision
+floating-point value and the five blocks marked $^a$ to $^e$ that on read
+return the current value as a single-precision floating-point value with different
+rounding modes are defined.\\
+There many consecutive 32-bit blocks that have the same functionality
+(add or subtract) since this allows for write-combining and thus better
+utilization of HyperTransport bandwidth.\\
+The complete ALU status can be saved and restored simply by reading and writing
+the upper 2 KB, starting with the lowest address. Note that since byte-sized
+writes are not implemented by the HyperTransport interface you should avoid
+using normal memory copy functions like memcpy in C and instead use your own
+function that always reads and writes 32 bit blocks or multiples thereof.\\
+The meaning of the offset and status blocks in the status area are explained
+in~\fref{sec:aluops} under op\_readoffset, op\_writeoffset, op\_readflags
+and op\_writeflags.\\
+Large parts of both areas are reserved for future extensions, like support for
+double precisions, multiply-and-accumulate or even more advanced operations.\\
