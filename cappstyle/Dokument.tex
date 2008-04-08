@@ -1,0 +1,73 @@
+\documentclass[a4paper,titlepage,12pt,twoside,openright]{scrreprt}
+
+\usepackage{fancyref}
+\usepackage{multirow}
+\usepackage{tikz}
+\usetikzlibrary{trees}
+\usetikzlibrary{shapes}
+\usepackage{listings}
+
+% Include style for title page, legal clause, and required classes.
+% Also sets the page style, header and footer.
+\usepackage{cappstyle}
+
+% Enter your hyphenation list, i.e. hy-phe-na-tion, in order to have these
+% words hyphenated correctly at the end of a line. Use spaces to separate 
+% words.
+\hyphenation{}
+
+\begin{document}
+
+	% make empty pages clear without any header, without any footer
+    \pagestyle{empty}
+
+    \capptitle{Studienarbeit}
+         {}                         % nuber of this thesis, normally blank
+         {Fast~and~Exact~Floating-Point~Accumulation}  % title of thesis
+         {Reimar~Döffinger}                % author name
+         {Dr.~Rainer~Buchty} % supervisor
+         {März 2008}        % month & year (for title page)
+         {Reimar Döffinger\\ 
+          Schauinslandstr. 4\\ 
+          75249 Kieselbronn\\ 
+          email: Reimar.Doeffinger@gmx.de}     % address
+          {Prof.~Dr.~Wolfgang~Karl}
+          
+    \cappclause{Reimar Döffinger}          % author name
+         {Karlsruhe, 01.03.2008}    % location, date (for legal clause)
+
+
+    % reset parskip to more useful settings than 1.5ex as in cappstyle.sty
+    \setlength{\parskip}{1.45ex plus 0.5ex minus 0.2ex}
+
+    \cleardoublepage
+    % Abstract
+    \include{abstract}
+    \cleardoublepage
+
+    \pagenumbering{Roman}
+    \pagestyle{plain}
+    \tableofcontents
+    \listoftables
+    \listoffigures
+    \cleardoublepage
+
+	\pagestyle{myfancy}
+    \include{motivation}
+
+    \include{ht}
+    \include{modules}
+    \include{accumulator}
+    \include{software}
+
+    \appendix
+
+%    \input{doxygen/latex/refman}
+
+    \nocite{*}
+%     \bibliographystyle{geralpha}
+    \bibliographystyle{plain}
+    \bibliography{Bibliografie}
+
+
+\end{document}
