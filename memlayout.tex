@@ -4,7 +4,16 @@
   \newcommand{\recth}{5mm}
   \newcommand\drawblock[3]{\draw (#1*\rectw,#2*\recth) rectangle +(\rectw,\recth);\draw (#1*\rectw+\rectw/2,#2*\recth+\recth/2) node {#3};}
   \newcounter{addr}
-  \foreach \y/\text in {0/add,1/add,2/sub,3/sub}{
+  \draw (8*\rectw,0*\recth) node[right] {0};
+  \drawblock{0}{0}{add}
+  \drawblock{1}{0}{add}
+  \drawblock{2}{0}{add}
+  \drawblock{3}{0}{add$^e$}
+  \drawblock{4}{0}{add$^d$}
+  \drawblock{5}{0}{add$^c$}
+  \drawblock{6}{0}{add$^b$}
+  \drawblock{7}{0}{add$^a$}
+  \foreach \y/\text in {1/add,2/sub,3/sub}{
     \setcounter{addr}{8*\y}
     \draw (8*\rectw,\y*\recth) node[right] {\arabic{addr}};
     \foreach \x in {0,...,7}{

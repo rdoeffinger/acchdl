@@ -1,8 +1,21 @@
 \chapter{Components of the Hardware Design}
 
+\begin{figure}[ht]
 \begin{center}
 \input{base_arch}
 \end{center}
+\caption{Modules and basic architecture of the design}
+\label{fig:modules}
+\end{figure}
+
+The system consists of 4 distinct parts, each implemented as a
+separate VHDL entity (except the HyperTransport core which is written in
+Verilog), as shown in~\fref{fig:modules}.\\
+The connections between these four parts and also connection between the
+HyperTransport core and the FPGA pins are described in a toplevel module
+called "acctop" which is not depicted since it only contains connections
+and no relevant code of its own.\\
+Each of these parts are described in detail in the following sections.
 
 \section{The HyperTransport Core}
 
@@ -31,10 +44,16 @@ described in~\fref{sec:htsimplify}.
 The HyperTransport simplification layer (the module called ht\_simplify)
 merges the posted and non-posted queue into one queue, handles setting
 the data\_complete signals of the HyperTransport core, splits multi-dword
-writes into multiple writes of a single dword and inserts nop
+reads/writes into multiple reads/writes of a single dword and inserts nop
 commands into the queue as necessary, thus eliminating the need for
 and extra "empty" signal, and provides a signal that indicates
 if the current command must be replied to via the response queue.\\
+There is also a "final" signal that is necessary to handle correctly
+split reads: all responses up to when the "final" signal is set
+must be answered in one single response packet.\\
+The "final" signal is set for other commands as well, but it should
+not be necessary there (it might help implement correct handling
+of byte-sized, masked writes though).\\
 This greatly reduces the complexity and frustration of designing a device
 that uses HyperTransport by handling the parts that are most error-prone
 and easily lead to a stopped CPU.\\
@@ -44,4 +63,32 @@ and 32 bits data per clock cycle, whereas the HT Core allows for up to one
 command and 64 bits of data per clock cycle per queue.\\
 
 \section{The Memory-Mapping Interface}
+
+The memory-mapping interface translates HyperTransport read-/write-requests into
+operations on the ALUs.\\
+Each ALU is assigned its own 4KB address space. The 4KB size was chosen to allow
+managing the ALUs via the CPUs MMU.
+This allows arbitrary mapping of ALU number as seen by the software to hardware
+ALU number, thus e.g. two programs each using ALUs 0-4 in their code can be remapped
+via MMU for one to use ALUs 0-4 and the other 5-8, so that no expensive saving and
+restoring of ALU state is necessary on program switches.\\
+This functionality would need a kernel-level driver though, currently there is only
+a purely user-level library available for accessing the functionality.\\
+
+\begin{figure}[ht]
+\begin{center}
 \input{memlayout}
+\label{fig:memlayout}
+\caption{Memory layout for memory-mapped access to ALUs}
+Addresses marked as "add" have no meaning when read except the first 5:\\
+\begin{tabular}{ll}
+$^a$ & current ALU value as float rounded to $0$\\
+$^b$ & current ALU value as float rounded away from $0$\\
+$^c$ & current ALU value as float rounded to $-\infty$\\
+$^d$ & current ALU value as float rounded to $+\infty$\\
+$^e$ & current ALU value as float rounded to nearest\\
+\end{tabular}
+\\
+These are also described in~\fref{tab:round}.
+\end{center}
+\end{figure}
