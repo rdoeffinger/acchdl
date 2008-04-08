@@ -53,8 +53,9 @@
     underflow flags as appropriate).}
 \tabline {op\_readflags} {
     read virtual 32 bit flag register. The upper 16 bits indicate
-    which of the lower 16 bits (the actual flags) are valid.
-    For a list of available flags see~\fref{tab:flags}.}
+    which of the lower 16 bits (the actual flags) are valid, which
+    allows for compatibility with future extended versions.
+    For a list of currently available flags see~\fref{tab:flags}.}
 \tabline {op\_writeflags} {
     set the flags marked by a set bit in the upper 16 bits to
     the value in the lower 16 bits.
