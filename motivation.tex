@@ -1,0 +1,40 @@
+% include this numbering in this file as it does not work when directly 
+% including in Dokument.tex
+\pagenumbering{arabic}
+
+\chapter{Motivation}
+It is well known that the ever increasing computing speed allows more
+and more problems to be solved computationally.
+But it also means --- especially with iterative algorithms --- that problems
+that could already be solved before can now be solved with higher accuracy.
+Thus, calculations can now much more easily hit the accuracy limit of the
+computer's native number format --- usually IEEE 754 double precision floating
+point.
+There are several solutions to this. One is to just increase the size of the
+floating point format once again, as when switching from single- to
+double-precision (a switch, that in case of Cell or GPU processing is still in
+progress).
+Another is full software emulation of larger data types as e.g. the
+MPFR library~\footnote{\url{http://www.mpfr.org}} provides.\\
+The approach used here instead is based on the previous work by
+Dr. Ulrich W. Kulisch~\cite{advar} and --- while keeping the current native
+floating point numbers --- implements additional, exact operations on these.
+Compared to just increasing the size of floating point numbers this has the
+advantage that at least some operations will be exact, and thus there is no
+need for an error estimation on these, which is a big advantage since error
+estimation is difficult and imprecise when done on a theoretical level
+beforehand and slow and often still imprecise when done during runtime e.g.
+via intervall arithmetic.
+Compared to a full software implementation it is still very well implementable
+in hardware, thus allowing for much faster speed.\\
+In the following, only an exact accumulation operation on single precision floating
+point numbers and its implementation is presented.\\
+Extending the design to support double precision should be a question of solving
+some minor, but time consuming technical issues due to e.g. HyperTransport data
+unit size being only 32 bit.\\
+Contrary to the work by Dr. Kulisch, multiplication was not implemented since
+multipliers on FPGAs especially for large sizes can simply not compete with
+those in a modern CPU and would use up a lot of hardware resources even if
+a user might have more use for e.g. square-root-and-accumulate than
+multiply-and-accumulate.
+
