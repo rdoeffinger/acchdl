@@ -14,17 +14,39 @@
   keywordsprefix=\%
 }
 
-\chapter{The Software Interface}
-For accessing the hardware a simple C library interface is provided.\\
-Except for initialization most of the code is in the header file, so
-that the functions can be inlined.\\
-To demonstrate the difference this makes, the code in~\fref{lst:demo}
-is compiled with different options.
-All tests were done with "gcc (GCC) 4.1.2 (Ubuntu 4.1.2-0ubuntu4)".
-
-%\lstset{basicstyle=\itshape}
+\lstset{basicstyle=\ttfamily}
+\lstset{breaklines=true}
 \lstset{captionpos=b,columns=[c]flexible}
 \lstset{language=C}
+
+\chapter{The Software Interface}
+For accessing the hardware a simple C library interface is provided.
+\Fref{lst:efacexample} is a small example program showing the basic
+use of this library, derived from one of the test programs for the design.
+\lstinputlisting[caption=example code for libefac use,label=lst:efacexample]{examplesum.c}
+\section{Available Functions}
+\section{Optimization Tricks}
+This section will explain some of the very specific tricks used in
+order to generate faster and smaller code to access the device.
+They are not very useful yet, since the speed of the device itself
+is the major limit and no software optimizations help (though smaller
+code always means less cache pressure).
+Still these details may be interesting to some and should help
+understand the code.\\
+The following explanations assume at least basic knowledge of x86
+assembler and how application linking and operating systems work.\\
+For a reference of x86 assembler instructions refer to e.g. AMD's
+Programmer's Manuals~\cite{amdinstr}.\\
+To demonstrate these various tricks, the code in~\fref{lst:demo}
+is compiled in several different ways.\\
+All tests were done with "gcc (GCC) 4.1.2 (Ubuntu 4.1.2-0ubuntu4)",
+and unless indicate otherwise were build for the x86\_64 architecture.\\
+In these examples, the device address range is assumed to be marked
+uncacheable which might not be the best option for optimal speed but
+simplifies the code for demonstration --- the difference is just a
+missing instruction like clflush or mfence.\\
+
+
 \begin{lstlisting}[float=ht,caption=compilation demonstration code,label=lst:demo]
 #include "libefac.h"
 void test(void) {
@@ -34,6 +56,20 @@ void test(void) {
 
 \lstset{language={[x86att]Assembler}}
 
+The C library during efac\_init maps the physical address space of the
+device into the application's address space. This is done via mmap,
+and usually the choice of virtual address is left to mmap and the
+resulting address stored in a variable.\\
+This leads to assembler code as in~\fref{lst:regptr}. efac\_regs
+here is a pointer variable (declared as "uint32\_t *efac\_regs").
+The contents of this pointer variable as a first step must be loaded
+into a register.\\
+If now efac\_regs is instead declared as an array
+("uint32\_t efac\_regs[REGISTER\_SIZE]") and the device simply mapped
+"over" it, the address is already known at link time and can be hard-code,
+as~\fref{lst:inline64} shows. Note that this trick may fail if compiling
+a dynamic library (more precisely if generating position-independent code).\\
+
 \begin{lstlisting}[float=ht,caption={x86\_64 using register pointer (gcc -S -m64 -O3)},label={lst:regptr}]
 test:
         movq    efac_regs(%rip), %rdx
@@ -42,7 +78,6 @@ test:
         movl    %eax, 68(%rdx)
         movl    %eax, 72(%rdx)
         movl    %eax, 76(%rdx)
-        clflush 64(%rdx)
         ret
 \end{lstlisting}
 
@@ -53,9 +88,27 @@ test:
         movl    %eax, efac_regs+68(%rip)
         movl    %eax, efac_regs+72(%rip)
         movl    %eax, efac_regs+76(%rip)
-        clflush efac_regs+64(%rip)
         ret
 \end{lstlisting}
+
+Another optimization is that except for initialization most of the code is
+in the header file, so that the functions can be inlined. The benefit is
+not only that the function call overhead is saved, but also expressions
+based on constant function arguments can be calculated at compile-time
+instead of runtime.\\
+In \fref{lst:noinline64} the address must be calculated at runtime,
+whereas due to inlining the can be calculated at compile-time in
+\fref{lst:inline64}. Of course this pre-calculation is only possible
+if the register number is a constant, but this should be the much
+more common case --- on most CPU architectures the register number
+is coded into the instruction at compile-time as well.\\
+Note that the effect of inlining is even more pronounced when compiling
+for 32 bit x86 architecture, as a comparison between \fref{lst:inline32}
+and \fref{lst:noinline32} shows. This is because the 32 bit ABI passes
+all arguments via the stack, which means the function needs a stack
+frame and the data must be loaded from stack into a register before
+it can be written again to the device.\\
+
 
 \begin{lstlisting}[float=ht,caption={x86\_64 not inlined (gcc -S -m64 -O3 -fno-inline)},label={lst:noinline64}]
 efac_add4:
@@ -66,7 +119,6 @@ efac_add4:
         movss   %xmm1, 68(%rdi)
         movss   %xmm2, 72(%rdi)
         movss   %xmm3, 76(%rdi)
-        clflush 64(%rdi)
         ret
 
 test:
@@ -87,7 +139,6 @@ test:
         movl    %eax, efac_regs+68
         movl    %eax, efac_regs+72
         movl    %eax, efac_regs+76
-        clflush efac_regs+64
         popl    %ebp
         ret
 \end{lstlisting}
@@ -106,7 +157,6 @@ efac_add4:
         movl    %edx, 72(%eax)
         movl    20(%ebp), %edx
         movl    %edx, 76(%eax)
-        clflush 64(%eax)
         popl    %ebp
         ret
 
