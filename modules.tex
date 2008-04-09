@@ -69,8 +69,8 @@ operations on the ALUs.\\
 Each ALU is assigned its own 4KB address space. The 4KB size was chosen to allow
 managing the ALUs via the CPUs MMU.
 This allows arbitrary mapping of ALU number as seen by the software to hardware
-ALU number, thus e.g. two programs each using ALUs 0-4 in their code can be remapped
-via MMU for one to use ALUs 0-4 and the other 5-8, so that no expensive saving and
+ALU number, thus e.g. two programs each using ALUs 0 -- 4 in their code can be remapped
+via MMU for one to use ALUs 0 -- 4 and the other 5 -- 8, so that no expensive saving and
 restoring of ALU state is necessary on program switches.\\
 This functionality would need a kernel-level driver though, currently there is only
 a purely user-level library available for accessing the functionality.\\
