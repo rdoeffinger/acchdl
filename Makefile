@@ -8,3 +8,7 @@ CFLAGS=-O2 -g3 -W -Wall
 
 clean:
 	rm -f *.aux *.log *.pdf
+
+doc:
+	make -C cappstyle
+
