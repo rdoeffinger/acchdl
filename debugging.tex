@@ -1,0 +1,36 @@
+\chapter{HyperTransport Debugging}
+Some HyperTransport errors cause a "machine check exception" (MCE) which
+the Linux kernel will print as a message containing a hexadecimal
+number.\\
+And example of such a message is:\\
+CPU 0: Machine Check Exception: 4 Bank 4 b200000000070f0f\\
+This message can be translated into a clear-text string
+with the mcelog program, for above message the result is:\\
+\begin{verbatim}
+> echo "CPU 0: Machine Check Exception: 4 Bank 4 b200000000070f0f" |\
+  mcelog --k8 --ascii
+HARDWARE ERROR. This is *NOT* a software problem!
+Please contact your hardware vendor
+CPU 0 4 northbridge   Northbridge ECC error
+  ECC syndrome = 0
+STATUS 0 MCGSTATUS 4
+\end{verbatim}
+This is an example that these messages are not always useful, since
+an ECC error and a syndrom of 0 is usually contradictory.\\
+A typical condition that causes an MCE is when the response
+to a read request times out.\\
+Unfortunately by far not all protocol errors cause an MCE. In particular,
+answering a read request with "target done" (without data) instead of
+a read request causes none, but results in "random" data as a result
+of the read.
+Note that it is usually not truly random but usually randomly one out of
+about 4 different values with a strong bias towards one of those values
+--- possibly whatever happened to be in the corresponding cache line or
+register before.\\
+There is also no error in case a read request for multiple dwords is only
+responded with one single dword. This actually does not seem to cause
+any problem at all. Unfortunately, the HyperTransport specification does
+not say anything explicitly about this case, so it remains unclear if
+this works just out of luck and with AMD's Opteron HyperTransport
+implementation or if all HyperTransport devices must support this.\\
+
