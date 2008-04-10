@@ -25,6 +25,52 @@ For accessing the hardware a simple C library interface is provided.
 use of this library, derived from one of the test programs for the design.
 \lstinputlisting[caption=example code for libefac use,label=lst:efacexample]{examplesum.c}
 \section{Available Functions}
+\subsection{int efac\_init(void)}
+This function initializes the device and clears all registers. Since there is
+no kernel-driver available yet, this uses mmap and libpci to directly map the
+device into virtual memory and thus needs root permission and the device
+can only be used by one process and thread.\\
+A return value of 0 means initialization has failed.
+\subsection{void efac\_clear(int reg)}
+Clears the ALU with number $reg$ to 0, also resetting all flags.
+\subsection{void efac\_add(int reg, float val)}
+Adds a single-precision floating-point value $val$ to the value
+of ALU number $reg$.
+\subsection{void efac\_sub(int reg, float val)}
+Behaves just as efac\_add just with inverted sign.
+\subsection{void efac\_add4(int reg, float val1, float val2, float val3, float val4)}
+Same behaviour as calling efac\_add four times, but may be faster.
+\subsection{void efac\_sub4(int reg, float val1, float val2, float val3, float val4)}
+As efac\_add4 with inverted signs.
+\subsection{float efac\_read(int reg)}
+Reads the current value of ALU number $reg$ as a single-precision floating-point value.
+The rounding mode used in unspecified.
+\subsection{float efac\_read\_round\_zero(int reg)}
+As efac\_read but the value is rounded towards $0$ if rounding is necessary.
+\subsection{float efac\_read\_round\_inf(int reg)}
+As efac\_read but the value is rounded away from $0$ if rounding is necessary.
+\subsection{float efac\_read\_round\_ninf(int reg)}
+As efac\_read but the value is rounded towards $-\infty$ if rounding is necessary.
+\subsection{float efac\_read\_round\_pinf(int reg)}
+As efac\_read but the value is rounded towards $+\infty$ if rounding is necessary.
+\subsection{float efac\_read\_round\_nearest(int reg)}
+As efac\_read but the value is rounded towards the nearest single-precision
+floating-point number.
+To avoid a bias, a number \em exactly \rm in-between two single-precision
+floating-point numbers is rounded towards the one with the lowest bit
+cleared ("even").
+\subsection{int efac\_is\_negative(int reg)}
+Returns $1$ if the current value of ALU number $reg$ is $< 0$, otherwise $0$.
+\subsection{int efac\_is\_overflow(int reg)}
+Returns $1$ if ALU number $reg$ is in overflow state, otherwise $0$.
+\subsection{int efac\_is\_zero(int reg)}
+Returns $1$ if ALU number $reg$ is $= 0$, otherwise $0$.
+\subsection{void efac\_clear\_overflow(int reg)}
+Clears the overflow state of ALU number $reg$.
+\subsection{void efac\_set\_offsets(int reg, int16\_t read\_offset, int16\_t write\_offset)}
+\subsection{void efac\_get\_offsets(int reg, int16\_t *read\_offset, int16\_t *write\_offset)}
+\subsection{void efac\_save(int reg, uint32\_t buf[512])}
+\subsection{void efac\_restore(int reg, const uint32\_t buf[512])}
 \section{Optimization Tricks}
 This section will explain some of the very specific tricks used in
 order to generate faster and smaller code to access the device.
