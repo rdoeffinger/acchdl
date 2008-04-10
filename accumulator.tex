@@ -4,7 +4,7 @@
 \newcommand\tabhead[1]{\hline\multicolumn{2}{|c|}{#1}\\ \hline}
 \newcommand\tabline[2]{#1 & #2\\ \hline}
 \begin{center}
-\begin{tabular}{|l|p{0.75\textwidth}|}
+\begin{tabularx}{\textwidth}{|l|X|}
 \tabhead     {Basic input signals}
 \tabline {clock}     {sensitive to rising edge.}
 \tabline {reset}     {set to 1 for an (asynchronous) reset.}
@@ -27,14 +27,14 @@
         result data after any read operation. This will be valid the
         cycle after the ready signal becomes 1 to indicate the start of
         processing for the operation following the read.}
-\end{tabular}
+\end{tabularx}
 \end{center}
 
 \subsection{Operations of the ALU core}
 \label{sec:aluops}
 \renewcommand\tabline[2]{#1 & #2\\ \hline}
 \begin{center}
-\begin{tabular}{|l|p{0.75\textwidth}|}
+\begin{tabularx}{\textwidth}{|l|X|}
 \hline
 \tabline {Name}  {Function}
 \hline
@@ -79,7 +79,7 @@
     adds/subtracts (depending on sign signal) the given
     single-precision floating-point value. Note that NaN is treated as $\infty$
     currently.}
-\end{tabular}
+\end{tabularx}
 \end{center}
 
 \begin{table}[ht]
@@ -105,7 +105,7 @@
 \label{tab:flags}
 \renewcommand\tabline[2]{#1 & #2\\ \hline}
 \begin{center}
-\begin{tabular}{|r|l|l|}
+\begin{tabular}{|r|l|}
 \hline
 \tabline {Bit} {Name}
 \hline
@@ -156,7 +156,7 @@ ALU is no longer always exact.
 
 \renewcommand\tabline[2]{#1 & \multicolumn{5}{p{0.8\textwidth}|}{#2}\\}
 \begin{center}
-\begin{tabular}{|r|p{0.25\textwidth}|r|p{0.25\textwidth}|r|p{0.25\textwidth}|}
+\begin{tabularx}{\textwidth}{|r|X|r|X|r|X|}
 \hline
 \tabline {  0} {Handle $\infty$/NaN special cases by setting the overflow bit}
 \tabline {  1} {combine sign of value with sign signal}
@@ -183,7 +183,7 @@ ALU is no longer always exact.
 14a & add/subtract carry & & & &\\
 15a & store 32 bit block for carry resolution & & & &\\
 \hline
-\end{tabular}
+\end{tabularx}
 \end{center}
 
 These steps are organized into clock cycles as follows:\\
@@ -225,7 +225,7 @@ Reducing the number of clock cycles is difficult for several reasons:\\
 \subsection{Steps of the op\_readfloat Operation}
 
 \begin{center}
-\begin{tabular}{|r|p{0.75\textwidth}|}
+\begin{tabularx}{\textwidth}{|r|X|}
 \hline
  1 & Determine block number of highest set bit (highest bit not equal to sign),
      or the number of the block containing the lowest bit representable by a
@@ -245,13 +245,13 @@ Reducing the number of clock cycles is difficult for several reasons:\\
 11 & use sign, exponent from step 10) and mantissa from step 9) to build the float value.
      Needs special-case for denormals and infinities.\\
 \hline
-\end{tabular}
+\end{tabularx}
 \end{center}
 
 These steps are organized into clock cycles as follows:\\
 \renewcommand\tabline[3]{#1 & #2 & #3\\}
 \begin{center}
-\begin{tabular}{|r|l|p{0.25\textwidth}|}
+\begin{tabularx}{\textwidth}{|r|l|X|}
 \hline
 \tabline {Clock} {Steps}                          {State}
 \hline
@@ -264,7 +264,7 @@ These steps are organized into clock cycles as follows:\\
 \tabline {6}     {4), 5), 7), 8)}                 {st\_out\_float4}
 \tabline {7}     {9), 10), 11)}                   {st\_out\_float\_normal or st\_out\_float\_denormal or st\_out\_float\_inf}
 \hline
-\end{tabular}
+\end{tabularx}
 \end{center}
 For descriptions of the states, see~\fref{sec:alustate}.\\
 
