@@ -27,9 +27,11 @@ Note that it is usually not truly random but usually randomly one out of
 about 4 different values with a strong bias towards one of those values
 --- possibly whatever happened to be in the corresponding cache line or
 register before.\\
-There is also no error in case a read request for multiple dwords is only
-responded with one single dword. This actually does not seem to cause
-any problem at all. Unfortunately, the HyperTransport specification does
+There is also no error in case a read request for multiple
+dwords~\footnote{dword means 32 bits in this context}
+is only responded with one single dword.
+This actually does not seem to cause any problem at all.
+Unfortunately, the HyperTransport specification does
 not say anything explicitly about this case, so it remains unclear if
 this works just out of luck and with AMD's Opteron HyperTransport
 implementation or if all HyperTransport devices must support this.\\
