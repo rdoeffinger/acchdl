@@ -1,4 +1,19 @@
 \chapter{The ALU core}
+This is the main part of the device. It is implemented by the VHDL entity with
+the name "accumulator". The VHDL-package accumulator\_types contains the
+corresponding component and necessary constant and type declarations.\\
+In difference to ALUs on ordinary CPUs this is not just the ALU 
+which operates on several independent registers, but the memory
+is actually part of the ALU and there is one ALU per "register".\\
+The reason for this is that the memory is quite big and the size
+of a register file on some older CPUs, namely 24x32 bits. Since
+routing makes up a big part of the timing cost especially on
+FPGAs each ALU component has only one "register" and multiple
+ALUs are instantiated in the superior module.\\
+This in addition also means a higher performance if multiple ALUs
+are in use compared to a single-ALU-multiple-registers approach,
+though for optimal throughput an additional per-ALU command
+queue buffer would have to be implemented.\\
 \section{Interface of the Accumulator VHDL Entity}
 \subsection{Ports of the ALU Core}
 \newcommand\tabhead[1]{\hline\multicolumn{2}{|c|}{#1}\\ \hline}

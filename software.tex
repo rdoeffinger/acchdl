@@ -68,14 +68,24 @@ Returns $1$ if ALU number $reg$ is $= 0$, otherwise $0$.
 \subsection{void efac\_clear\_overflow(int reg)}
 Clears the overflow state of ALU number $reg$.
 \subsection{void efac\_set\_offsets(int reg, int16\_t read\_offset, int16\_t write\_offset)}
+Sets the exponent offsets for floating-point operations.
+The write\_offset is added to the floating-point exponent during the add
+and subtract operations.
+The read\_offset is added to the calculated floating-point exponent at the
+end of the read operations.
+This allows to add a multiplication or division by a power of two at no extra
+cost.
 \subsection{void efac\_get\_offsets(int reg, int16\_t *read\_offset, int16\_t *write\_offset)}
+Reads the exponent offsets for floating-point operations.
 \subsection{void efac\_save(int reg, uint32\_t buf[512])}
+Saves the state of the ALU number $reg$ into the RAM buffer $buf$.
 \subsection{void efac\_restore(int reg, const uint32\_t buf[512])}
+Restores the ALU state from the RAM buffer $buf$ in to the ALU number $reg$.
 \section{Optimization Tricks}
 This section will explain some of the very specific tricks used in
 order to generate faster and smaller code to access the device.
 They are not very useful yet, since the speed of the device itself
-is the major limit and no software optimizations help (though smaller
+is the major limit and there no software optimizations help (though smaller
 code always means less cache pressure).
 Still these details may be interesting to some and should help
 understand the code.\\
