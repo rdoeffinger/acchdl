@@ -35,4 +35,15 @@ Unfortunately, the HyperTransport specification does
 not say anything explicitly about this case, so it remains unclear if
 this works just out of luck and with AMD's Opteron HyperTransport
 implementation or if all HyperTransport devices must support this.\\
-
+Another type of error causes the CPU to hang without any kind of output
+or other error indication.
+The cause of these remains unclear, but so far these could all be solved
+by changing various synthesis options, usually decreasing optimization
+levels.
+Rewriting the code to use more processes, preferably changing only
+very few signals in each process and avoiding variables also seems to
+help.
+The precise cause of this behaviour has not been found so far,
+even though the dependency on the optimization level hints at a problem
+with the synthesis tools, possibly also related to mixing VHDL and
+Verilog code.
