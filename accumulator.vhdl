@@ -95,6 +95,7 @@ architecture behaviour of accumulator is
   --! \brief how much left shifting is needed so that input float value is block-aligned
   --! \sa #get_input_shift
   signal shift_cnt : natural range 0 to BLOCKSIZE-1;
+  --! \brief signal connected to the ready port since out ports can not be read
   signal ready_sig : std_logic;
   --! \brief block number where carry resolution must happen
   --! \sa #find_carry_pos
@@ -106,6 +107,19 @@ architecture behaviour of accumulator is
   --! \brief number of first non-zero block
   --! \sa #find_exact_pos
   signal exact_pos : natural range 0 to NUMBLOCKS;
+  signal block_value : subblock;
+  signal block_allmask : std_logic;
+  signal block_allvalue : std_logic;
+  signal write_overlap : std_logic;
+  signal write_overlap_value : subblock;
+  function active_high(a : boolean) return std_logic is
+  begin
+    if a then
+      return '1';
+    else
+      return '0';
+    end if;
+  end;
   --! return number of highest set bit
   function maxbit(v: subblock) return integer is
     variable i : natural range 1 to BLOCKSIZE-1;
@@ -185,28 +199,36 @@ end process;
 --! all-0 or all-1 depending on sign.
 read : process(clock,reset)
 variable small_pos : natural range 0 to NUMBLOCKS - 1;
-variable from_accu : subblock;
 begin
   if reset = '1' then
-    read_block <= (others => '0');
+    write_overlap <= '1';
+    write_overlap_value <= (others => '0');
   elsif rising_edge(clock) then
     small_pos := next_pos;
-    from_accu := accu(small_pos);
-    if next_pos >= 0 and next_pos < NUMBLOCKS then
-      if write_enable(0) = '1' and small_pos = write_pos then
-        read_block <= write_block;
-      elsif allmask(small_pos) = '1' then
-        read_block <= (others => allvalue(small_pos));
-      else
-        read_block <= from_accu;
-      end if;
+    block_value <= accu(next_pos);
+    write_overlap <= active_high(write_enable(0) = '1' and small_pos = write_pos);
+    write_overlap_value <= write_block;
+    if next_pos < 0 then
+      block_allmask <= '1';
+      block_allvalue <= '0';
+    elsif next_pos >= NUMBLOCKS then
+      block_allmask <= '1';
+      block_allvalue <= allvalue(NUMBLOCKS);
     else
-      if next_pos < 0 then
-        read_block <= (others => '0');
-      else
-        read_block <= (others => allvalue(NUMBLOCKS));
-      end if;
-    end if;
+      block_allmask <= allmask(small_pos);
+      block_allvalue <= allvalue(small_pos);
+    end if;	 
+  end if;
+end process;
+
+get_readblock : process(block_value, block_allmask, block_allvalue, write_overlap, write_overlap_value)
+begin
+  if write_overlap = '1' then
+    read_block <= write_overlap_value;
+  elsif block_allmask = '1' then
+    read_block <= (others => block_allvalue);
+  else
+    read_block <= block_value;
   end if;
 end process;
 
@@ -222,14 +244,12 @@ end process;
 
 --! \retval #accu
 write : process(clock,reset)
-variable small_pos : natural range 0 to NUMBLOCKS - 1;
 begin
   if reset = '1' then
     null;
   elsif rising_edge(clock) then
     if write_enable(0) = '1' then
-      small_pos := write_pos;
-      accu(small_pos) <= write_block;
+      accu(write_pos) <= write_block;
     end if;
   end if;
 end process;
