@@ -108,10 +108,8 @@ architecture behaviour of accumulator is
   --! \sa #find_exact_pos
   signal exact_pos : natural range 0 to NUMBLOCKS;
   signal block_value : subblock;
-  signal block_allmask : std_logic;
-  signal block_allvalue : std_logic;
-  signal write_overlap : std_logic;
-  signal write_overlap_value : subblock;
+  signal block_override : std_logic;
+  signal block_override_value : subblock;
   function active_high(a : boolean) return std_logic is
   begin
     if a then
@@ -122,7 +120,6 @@ architecture behaviour of accumulator is
   end;
   --! return number of highest set bit
   function maxbit(v: subblock) return integer is
-    variable i : natural range 1 to BLOCKSIZE-1;
   begin
     for i in BLOCKSIZE - 1 downto 1 loop
       if v(i) = '1' then
@@ -201,32 +198,31 @@ read : process(clock,reset)
 variable small_pos : natural range 0 to NUMBLOCKS - 1;
 begin
   if reset = '1' then
-    write_overlap <= '1';
-    write_overlap_value <= (others => '0');
+    block_override <= '1';
+    block_override_value <= (others => '0');
   elsif rising_edge(clock) then
     small_pos := next_pos;
     block_value <= accu(next_pos);
-    write_overlap <= active_high(write_enable(0) = '1' and small_pos = write_pos);
-    write_overlap_value <= write_block;
-    if next_pos < 0 then
-      block_allmask <= '1';
-      block_allvalue <= '0';
+	 if write_enable(0) = '1' and small_pos = write_pos then
+      block_override <= '1';
+      block_override_value <= write_block;
+    elsif next_pos < 0 then
+      block_override <= '1';
+      block_override_value <= (others => '0');
     elsif next_pos >= NUMBLOCKS then
-      block_allmask <= '1';
-      block_allvalue <= allvalue(NUMBLOCKS);
+      block_override <= '1';
+      block_override_value <= (others => allvalue(NUMBLOCKS));
     else
-      block_allmask <= allmask(small_pos);
-      block_allvalue <= allvalue(small_pos);
+      block_override <= allmask(small_pos);
+      block_override_value <= (others => allvalue(small_pos));
     end if;	 
   end if;
 end process;
 
-get_readblock : process(block_value, block_allmask, block_allvalue, write_overlap, write_overlap_value)
+get_readblock : process(block_value, block_override, block_override_value)
 begin
-  if write_overlap = '1' then
-    read_block <= write_overlap_value;
-  elsif block_allmask = '1' then
-    read_block <= (others => block_allvalue);
+  if block_override = '1' then
+    read_block <= block_override_value;
   else
     read_block <= block_value;
   end if;
@@ -566,7 +562,6 @@ end process;
 
 --! \retval #next_pos
 get_next_pos : process(clock,reset)
-  variable i : integer;
   variable add : natural;
   variable tmp : flagtype;
   variable tmp2 : flagtype;
