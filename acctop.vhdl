@@ -43,7 +43,7 @@ end entity;
 
 --! implementation of toplevel connections between modules
 architecture behaviour of acctop is
-  component htxtop is
+  component ht_iobuf_wrapper is
     port (
       PWROK : in std_logic;
       RESET_N : in std_logic;
@@ -58,6 +58,18 @@ architecture behaviour of acctop is
       CTL_LINK2CORE_L : in std_logic;
       CAD_LINK2CORE_H : in std_logic_vector(15 downto 0);
       CAD_LINK2CORE_L : in std_logic_vector(15 downto 0);
+      link_clk_0_c2l : in std_logic;
+      link_clk_1_c2l : in std_logic;
+      ctl_c2l : in std_logic;
+      cad_c2l : in std_logic_vector(15 downto 0);
+      ht_pwrok : out std_logic;
+      ht_res_n : out std_logic;
+      ht_ldtstop_n : out std_logic;
+      ht_refclk : out std_logic;
+      link_clk_0_l2c : out std_logic;
+      link_clk_1_l2c : out std_logic;
+      ctl_l2c : out std_logic;
+      cad_l2c : out std_logic_vector(15 downto 0);
       CLK0_CORE2LINK_H : out std_logic;
       CLK0_CORE2LINK_L : out std_logic;
       CLK1_CORE2LINK_H : out std_logic;
@@ -65,7 +77,23 @@ architecture behaviour of acctop is
       CTL_CORE2LINK_H : out std_logic;
       CTL_CORE2LINK_L : out std_logic;
       CAD_CORE2LINK_H : out std_logic_vector(15 downto 0);
-      CAD_CORE2LINK_L : out std_logic_vector(15 downto 0);
+      CAD_CORE2LINK_L : out std_logic_vector(15 downto 0)
+    );
+  end component;
+  component ht_link is
+    port (
+      ht_pwrok : in std_logic;
+      ht_res_n : in std_logic;
+      ht_ldtstop_n : in std_logic;
+      ht_refclk : in std_logic;
+      link_clk_0_l2c : in std_logic;
+      link_clk_1_l2c : in std_logic;
+      ctl_l2c : in std_logic;
+      cad_l2c : in std_logic_vector(15 downto 0);
+      link_clk_0_c2l : out std_logic;
+      link_clk_1_c2l : out std_logic;
+      ctl_c2l : out std_logic;
+      cad_c2l : out std_logic_vector(15 downto 0);
 
       NP_DATA_CORE2APP : out std_logic_vector(63 downto 0);
       NP_CTRL_CORE2APP : out std_logic_vector(95 downto 0);
@@ -111,7 +139,7 @@ architecture behaviour of acctop is
 
       ext_clk : in std_logic;
       ref_clk : out std_logic;
-      reset_n_out : out std_logic;
+      res_core_n : out std_logic;
       UnitID : out std_logic_vector(4 downto 0);
 
       -- unused internal stuff
@@ -120,6 +148,20 @@ architecture behaviour of acctop is
       internal_reset : out std_logic_vector(31 downto 0)
     );
   end component;
+
+signal ht_pwrok : std_logic;
+signal ht_res_n : std_logic;
+signal ht_ldtstop_n : std_logic;
+signal ht_refclk : std_logic;
+signal link_clk_0_l2c : std_logic;
+signal link_clk_1_l2c : std_logic;
+signal ctl_l2c : std_logic;
+signal cad_l2c : std_logic_vector(15 downto 0);
+signal link_clk_0_c2l : std_logic;
+signal link_clk_1_c2l : std_logic;
+signal ctl_c2l : std_logic;
+signal cad_c2l : std_logic_vector(15 downto 0);
+
 --! \name HyperTransport core signals
 --! \brief signals connected to the application-side of the HyperTransport core
 --! \{
@@ -235,8 +277,7 @@ begin
     response_cmd_put => response_cmd_put,
     response_data_put => response_data_put
   );
-  --! the HyperTransport core
-  core : htxtop port map (
+  iobuf_wrapper : ht_iobuf_wrapper port map (
     PWROK            => HTX_PWROK     ,
     RESET_N          => HTX_RES_N     ,
     LDTSTOP_N        => HTX_LDTSTOP_N ,
@@ -258,6 +299,34 @@ begin
     CTL_CORE2LINK_L  => HTX_CTLOUTL   ,
     CAD_CORE2LINK_H  => HTX_CADOUTH   ,
     CAD_CORE2LINK_L  => HTX_CADOUTL   ,
+
+    ht_pwrok       => ht_pwrok      ,
+    ht_res_n       => ht_res_n      ,
+    ht_ldtstop_n   => ht_ldtstop_n  ,
+    ht_refclk      => ht_refclk     ,
+    link_clk_0_l2c => link_clk_0_l2c,
+    link_clk_1_l2c => link_clk_1_l2c,
+    ctl_l2c        => ctl_l2c       ,
+    cad_l2c        => cad_l2c       ,
+    link_clk_0_c2l => link_clk_0_c2l,
+    link_clk_1_c2l => link_clk_1_c2l,
+    ctl_c2l        => ctl_c2l       ,
+    cad_c2l        => cad_c2l
+  );
+  --! the HyperTransport core
+  core : ht_link port map (
+    ht_pwrok       => ht_pwrok      ,
+    ht_res_n       => ht_res_n      ,
+    ht_ldtstop_n   => ht_ldtstop_n  ,
+    ht_refclk      => ht_refclk     ,
+    link_clk_0_l2c => link_clk_0_l2c,
+    link_clk_1_l2c => link_clk_1_l2c,
+    ctl_l2c        => ctl_l2c       ,
+    cad_l2c        => cad_l2c       ,
+    link_clk_0_c2l => link_clk_0_c2l,
+    link_clk_1_c2l => link_clk_1_c2l,
+    ctl_c2l        => ctl_c2l       ,
+    cad_c2l        => cad_c2l       ,
 
     NP_CTRL_CORE2APP       => nonposted_cmd_in,
     NP_DATA_CORE2APP       => nonposted_data_in,
@@ -303,7 +372,7 @@ begin
 
     ext_clk => clock,
     ref_clk => clock,
-    reset_n_out => reset_n,
+    res_core_n => reset_n,
     UnitID => UnitID
   );
 
