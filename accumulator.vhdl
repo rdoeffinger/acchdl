@@ -87,6 +87,8 @@ architecture behaviour of accumulator is
   --! \brief indicates how much left-shifting is needed so that leftmost bit is set/unset (depending on sign)
   --! \sa #calc_floatshift
   signal floatshift : natural range 0 to BLOCKSIZE-1;
+  signal floatshift_pos : natural range 0 to BLOCKSIZE-1;
+  signal floatshift_neg : natural range 0 to BLOCKSIZE-1;
   signal limited_read_pos : natural range 0 to NUMBLOCKS;
   signal exp : integer range -65536 to 65535;
   signal read_offset : integer range -32768 to 32767;
@@ -413,7 +415,11 @@ begin
       when st_out_float2 =>
         exp <= limited_read_pos * BLOCKSIZE - (NUMBLOCKS / 2 - 4) * BLOCKSIZE + 8 + read_offset;
       when st_out_float3 =>
-        exp <= exp - floatshift;
+        if allvalue(NUMBLOCKS) = '1' then
+          exp <= exp - floatshift_neg;
+        else
+          exp <= exp - floatshift_pos;
+        end if;
       when others =>
         null;
     end case;
@@ -429,10 +435,13 @@ begin
   elsif rising_edge(clock) then
     case state is
       when st_out_float2 =>
+        floatshift_pos <= BLOCKSIZE - 1 - maxbit(subblock(read_block));
+        floatshift_neg <= BLOCKSIZE - 1 - maxbit(subblock(not read_block));
+      when st_out_float3 =>
         if allvalue(NUMBLOCKS) = '1' then
-          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(not read_block));
+          floatshift <= floatshift_neg;
         else
-          floatshift <= BLOCKSIZE - 1 - maxbit(subblock(read_block));
+          floatshift <= floatshift_pos;
         end if;
       when others =>
         null;
