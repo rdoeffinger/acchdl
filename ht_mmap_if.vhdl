@@ -261,11 +261,13 @@ begin
     if reset_n = '0' then
       null;
     elsif rising_edge(clock) then
-      if ready(cmd_reg) = '1' then
-        data_in(cmd_reg) <= X"00000000"&data;
-        pos(cmd_reg) <= not addr(8) & addr(7 downto 0);
-        sign(cmd_reg) <= addr(6);
+      for i in 0 to NUMREGS-1 loop
+      if ready(i) = '1' then
+        data_in(i) <= X"00000000"&data;
+        pos(i) <= not addr(8) & addr(7 downto 0);
+        sign(i) <= addr(6);
       end if;
+      end loop;
     end if;
   end process;
 
