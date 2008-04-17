@@ -592,8 +592,7 @@ begin
     case state is
       when st_in_float0 | st_add0 =>
         next_pos <= next_pos + 1;
-      when st_add1 =>
-        small_pos := read_pos;
+        small_pos := next_pos;
         add := 2**(small_pos + 2);
         if sig_sign = '0' then
           tmp := allvalue and allmask;
@@ -604,6 +603,7 @@ begin
           tmp2 := std_logic_vector(unsigned(tmp) - add);
           tmp := tmp and not tmp2;
         end if;
+      when st_add1 =>
         next_pos <= maxbit(X"00"&"0"&tmp(NUMBLOCKS-1 downto 0));
       when st_out_float1 =>
         next_pos <= next_pos - 1;
