@@ -32,6 +32,9 @@ Computer Architecture Group of the University of Mannheim~\cite{htcore},
 more specifically the version 0.9 for 16-bit links from September 2007.
 Unfortunately, that version has some problem that causes HyperTransport
 transfers to be very slow, reducing the speed by more than a factor 3.
+In addition, it also uses a port named reset\_\_n, but consecutive
+underscores are not allowed in VHDL and thus this port must be renamed
+before it can be used via VHDL.\\
 Thus using the version 1.0 is strongly recommended, although it has
 a slightly different usage and there is no documentation at all available
 for it --- though at least the ucf restraint file can be reused from
